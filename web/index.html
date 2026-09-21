@@ -12,6 +12,48 @@
   <div class="noise" aria-hidden="true"></div>
   <div class="scanline" aria-hidden="true"></div>
 
+  <button id="leftArchiveHandle" class="side-handle side-handle-left" type="button" aria-controls="leftArchivePanel" aria-expanded="false">
+    <span>PROCESSOS</span>
+  </button>
+
+  <aside id="leftArchivePanel" class="side-panel side-panel-left" aria-hidden="true">
+    <div class="side-panel-head">
+      <div>
+        <p class="eyebrow">DOCUMENT LIBRARY</p>
+        <h2>PROCESSOS</h2>
+      </div>
+      <button class="side-panel-close" type="button" data-close-panel="leftArchivePanel" aria-label="Fechar menu de processos">×</button>
+    </div>
+    <div class="side-panel-body">
+      <div class="side-placeholder">
+        <strong>ACERVO OPERACIONAL</strong>
+        <p>Estrutura preparada para manuais agrupados por tema. As categorias e documentos serão cadastrados nas próximas etapas.</p>
+      </div>
+    </div>
+  </aside>
+
+  <button id="rightArchiveHandle" class="side-handle side-handle-right" type="button" aria-controls="rightArchivePanel" aria-expanded="false">
+    <span>PROJETOS</span>
+  </button>
+
+  <aside id="rightArchivePanel" class="side-panel side-panel-right" aria-hidden="true">
+    <div class="side-panel-head">
+      <div>
+        <p class="eyebrow">PROJECT ARCHIVE</p>
+        <h2>PROJETOS &amp; ORIENTAÇÕES</h2>
+      </div>
+      <button class="side-panel-close" type="button" data-close-panel="rightArchivePanel" aria-label="Fechar menu de projetos e orientações">×</button>
+    </div>
+    <div class="side-panel-body">
+      <div class="side-placeholder">
+        <strong>ACERVO DE PROJETOS</strong>
+        <p>Estrutura preparada para registros, manuais orientativos, materiais de implantação e documentação de projetos.</p>
+      </div>
+    </div>
+  </aside>
+
+  <div id="sidePanelBackdrop" class="side-panel-backdrop" aria-hidden="true"></div>
+
   <main class="shell">
     <header class="topbar">
       <div class="brand">
