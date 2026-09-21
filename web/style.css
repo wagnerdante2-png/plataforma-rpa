@@ -94,13 +94,14 @@ body {
   gap: 14px;
 }
 
-.brand-mark {
-  color: #001905;
-  background: var(--green);
-  font-size: 20px;
-  font-weight: 900;
-  padding: 8px 10px;
-  box-shadow: 0 0 20px rgba(82,255,135,.25);
+.brand-logo {
+  width: 170px;
+  height: 84px;
+  object-fit: cover;
+  border: 1px solid rgba(82,255,135,.34);
+  background: #020503;
+  box-shadow: 0 0 22px rgba(82,255,135,.14);
+  flex: 0 0 auto;
 }
 
 h1, h2, h3, h4, p { margin: 0; }
