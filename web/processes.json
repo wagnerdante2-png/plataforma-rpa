@@ -8,12 +8,34 @@
         {
           "id": "frente-caixa",
           "label": "Frente de Caixa",
-          "documents": []
+          "documents": [
+            {
+              "title": "Fechamento de Caixa",
+              "file": "/archive/processos/operacoes/frente-caixa/Fechamento de Caixa.pdf"
+            },
+            {
+              "title": "PDV Touch",
+              "file": "/archive/processos/operacoes/frente-caixa/PDV Touch.pdf"
+            },
+            {
+              "title": "Self-Checkout",
+              "file": "/archive/processos/operacoes/frente-caixa/Self-Checkout.pdf"
+            },
+            {
+              "title": "Trocas entre Filiais",
+              "file": "/archive/processos/operacoes/frente-caixa/Trocas entre Filiais.pdf"
+            }
+          ]
         },
         {
           "id": "recebimento",
           "label": "Recebimento",
-          "documents": []
+          "documents": [
+            {
+              "title": "RECEBIMENTO DE MERCADORIAS",
+              "file": "/archive/processos/operacoes/recebimento/RECEBIMENTO DE MERCADORIAS.pdf"
+            }
+          ]
         },
         {
           "id": "fiscalizacao",
@@ -38,27 +60,82 @@
         {
           "id": "precificacao",
           "label": "Precificação",
-          "documents": []
+          "documents": [
+            {
+              "title": "Auditoria de Preços",
+              "file": "/archive/processos/operacoes/precificacao/Auditoria de Preços.pdf"
+            },
+            {
+              "title": "Precificação",
+              "file": "/archive/processos/operacoes/precificacao/Precificação.pdf"
+            }
+          ]
         },
         {
           "id": "validades",
           "label": "Validades",
-          "documents": []
+          "documents": [
+            {
+              "title": "Norma de Rebaixa de Alimentos",
+              "file": "/archive/processos/operacoes/validades/Norma de Rebaixa de Alimentos.pdf"
+            },
+            {
+              "title": "Solicitação de Rebaixa de Alimentos",
+              "file": "/archive/processos/operacoes/validades/Solicitação de Rebaixa de Alimentos.pdf"
+            }
+          ]
+        },
+        {
+          "id": "prevencao-perdas",
+          "label": "Prevenção de Perdas",
+          "documents": [
+            {
+              "title": "Compra de Funcionários",
+              "file": "/archive/processos/operacoes/prevencao-de-perdas/Compra de Funcionários.pdf"
+            }
+          ]
         },
         {
           "id": "quebras",
           "label": "Quebras",
-          "documents": []
+          "documents": [
+            {
+              "title": "QUEBRAS",
+              "file": "/archive/processos/operacoes/quebras/QUEBRAS.pdf"
+            }
+          ]
         },
         {
           "id": "uso-consumo",
           "label": "Uso e Consumo",
-          "documents": []
+          "documents": [
+            {
+              "title": "Uso de Sacolas",
+              "file": "/archive/processos/operacoes/uso-e-consumo/Uso de Sacolas.pdf"
+            },
+            {
+              "title": "Uso e Consumo",
+              "file": "/archive/processos/operacoes/uso-e-consumo/Uso e Consumo.pdf"
+            }
+          ]
         },
         {
           "id": "ferramentas-gerenciais",
           "label": "Ferramentas Gerenciais",
-          "documents": []
+          "documents": [
+            {
+              "title": "Descrição Cargos Lojas - Operacional",
+              "file": "/archive/processos/operacoes/ferramentas-gerenciais/Descrição Cargos Lojas - Operacional.pdf"
+            },
+            {
+              "title": "ESCALA DE FOLGAS",
+              "file": "/archive/processos/operacoes/ferramentas-gerenciais/ESCALA DE FOLGAS.pdf"
+            },
+            {
+              "title": "Reuniões Diárias",
+              "file": "/archive/processos/operacoes/ferramentas-gerenciais/Reuniões Diárias.pdf"
+            }
+          ]
         }
       ]
     },
