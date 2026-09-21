@@ -198,19 +198,13 @@ async function loadResources() {
 async function openWorkforceMvp() {
   try {
     const status = await api("/api/workforce");
-    const target = status.installed ? status.localUrl : status.fallbackUrl;
 
-    if (!target) {
-      throw new Error("Frontend do Workforce indisponível.");
+    if (!status.installed || !status.localUrl) {
+      throw new Error("Snapshot local do Workforce ainda não foi incorporado ao pacote da Central.");
     }
 
-    terminal(
-      status.installed
-        ? "Workforce Operacional: abrindo snapshot local."
-        : "Workforce Operacional: snapshot local ainda não empacotado; abrindo fonte histórica externa."
-    );
-
-    window.open(target, "_blank", "noopener,noreferrer");
+    terminal("Workforce Operacional: abrindo snapshot local.");
+    window.open(status.localUrl, "_blank", "noopener,noreferrer");
   } catch (error) {
     toast(error.message || "Não foi possível abrir o Workforce.", true);
     terminal("erro ao abrir Workforce: " + (error.message || error));
