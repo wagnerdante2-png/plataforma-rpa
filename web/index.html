@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Central RPA // Local Automation Node</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <canvas id="matrix" aria-hidden="true"></canvas>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="scanline" aria-hidden="true"></div>
+
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">&gt;_</div>
+        <div>
+          <h1 id="title">CENTRAL RPA</h1>
+          <p id="subtitle">LOCAL AUTOMATION NODE // 127.0.0.1</p>
+        </div>
+      </div>
+      <div class="node-state">
+        <span class="pulse"></span>
+        <span id="nodeStatus">NODE ONLINE</span>
+        <span class="divider">|</span>
+        <span id="clock">--:--:--</span>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">AUTOMATION CONTROL LAYER</p>
+        <h2>Escolha um processo.<br><span>Execute localmente.</span></h2>
+        <p class="hero-copy">
+          Orquestração local de RPAs Windows. Nenhum agente externo. Nenhum workflow remoto.
+          Cada robô permanece independente e executa pelo próprio CMD.
+        </p>
+      </div>
+      <div class="terminal-card" aria-label="Estado do sistema">
+        <div class="terminal-head">
+          <span></span><span></span><span></span>
+          <strong>central@local:~</strong>
+        </div>
+        <div class="terminal-body" id="terminal">
+          <p><b>$</b> boot central-rpa</p>
+          <p><span class="ok">[ OK ]</span> interface local carregada</p>
+          <p><span class="ok">[ OK ]</span> executor protegido</p>
+          <p><span class="muted">[ .. ]</span> aguardando catálogo...</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">ROBOT REGISTRY</p>
+          <h3>Automações disponíveis</h3>
+        </div>
+        <div class="counter"><span id="robotCount">0</span> módulos</div>
+      </div>
+
+      <div id="robots" class="robot-grid" aria-live="polite"></div>
+
+      <div id="emptyState" class="empty-state" hidden>
+        <div class="empty-icon">[ ]</div>
+        <h4>Nenhum robô conectado</h4>
+        <p>O núcleo da plataforma está pronto. Os repositórios existentes serão vinculados ao catálogo na próxima etapa.</p>
+      </div>
+    </section>
+
+    <footer>
+      <span>CENTRAL-RPA / LOCALHOST ONLY</span>
+      <span>NO ACTIONS // NO CLOUD EXECUTION</span>
+      <span id="footerTime">--</span>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
