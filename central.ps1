@@ -545,9 +545,16 @@ function Get-ContentType {
         ".css"  { return "text/css; charset=utf-8" }
         ".js"   { return "application/javascript; charset=utf-8" }
         ".json" { return "application/json; charset=utf-8" }
-        ".svg"  { return "image/svg+xml" }
-        ".png"  { return "image/png" }
-        ".pdf"  { return "application/pdf" }
+        ".svg"   { return "image/svg+xml" }
+        ".png"   { return "image/png" }
+        ".jpg"   { return "image/jpeg" }
+        ".jpeg"  { return "image/jpeg" }
+        ".webp"  { return "image/webp" }
+        ".ico"   { return "image/x-icon" }
+        ".woff"  { return "font/woff" }
+        ".woff2" { return "font/woff2" }
+        ".ttf"   { return "font/ttf" }
+        ".pdf"   { return "application/pdf" }
         default { return "application/octet-stream" }
     }
 }
