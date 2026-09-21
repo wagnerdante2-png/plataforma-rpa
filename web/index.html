@@ -187,12 +187,14 @@
         <button id="pdfModalClose" class="pdf-modal-close" type="button" aria-label="Fechar documento">×</button>
       </header>
       <div class="pdf-modal-body">
-        <iframe id="pdfFrame" title="Visualizador de documento PDF"></iframe>
+        <div id="pdfViewerStatus" class="pdf-viewer-status">AGUARDANDO DOCUMENTO...</div>
+        <div id="pdfViewerPages" class="pdf-viewer-pages" aria-live="polite"></div>
       </div>
     </section>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
