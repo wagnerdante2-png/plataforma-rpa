@@ -3,7 +3,8 @@ const $ = (id) => document.getElementById(id);
 const state = {
   robots: [],
   busy: new Set(),
-  processCatalog: []
+  processCatalog: [],
+  pdfRenderToken: 0
 };
 
 function escapeHtml(value) {
@@ -285,14 +286,17 @@ function renderProcessTree() {
   }
 }
 
-function openPdfDocument(doc, parentNode) {
+async function openPdfDocument(doc, parentNode) {
   if (!doc || !doc.file) return;
 
   const modal = $("pdfModal");
-  const frame = $("pdfFrame");
   const title = $("pdfModalTitle");
   const meta = $("pdfModalMeta");
-  if (!modal || !frame || !title || !meta) return;
+  const status = $("pdfViewerStatus");
+  const pagesRoot = $("pdfViewerPages");
+  if (!modal || !title || !meta || !status || !pagesRoot) return;
+
+  const token = ++state.pdfRenderToken;
 
   title.textContent = doc.title || "Documento";
   const metaParts = [];
@@ -300,18 +304,100 @@ function openPdfDocument(doc, parentNode) {
   if (doc.version) metaParts.push(doc.version);
   if (doc.date) metaParts.push(doc.date);
   meta.textContent = metaParts.join(" // ");
-  frame.src = doc.file;
+
+  pagesRoot.innerHTML = "";
+  status.hidden = false;
+  status.classList.remove("error");
+  status.textContent = "CARREGANDO PDF...";
+
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
+
+  try {
+    if (!window.pdfjsLib) {
+      throw new Error("Biblioteca PDF.js não foi carregada.");
+    }
+
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    const response = await fetch(encodeURI(doc.file), { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Documento não encontrado ou indisponível (" + response.status + ").");
+    }
+
+    const bytes = await response.arrayBuffer();
+    if (token !== state.pdfRenderToken) return;
+
+    const pdf = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+    if (token !== state.pdfRenderToken) return;
+
+    status.textContent = "RENDERIZANDO " + pdf.numPages + " PÁGINA(S)...";
+
+    const body = modal.querySelector(".pdf-modal-body");
+    const availableWidth = Math.max(320, (body ? body.clientWidth : 1000) - 48);
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      if (token !== state.pdfRenderToken) return;
+
+      const page = await pdf.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const cssScale = Math.min(1.8, availableWidth / baseViewport.width);
+      const viewport = page.getViewport({ scale: cssScale });
+
+      const wrap = document.createElement("div");
+      wrap.className = "pdf-page-wrap";
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.floor(viewport.width * pixelRatio);
+      canvas.height = Math.floor(viewport.height * pixelRatio);
+      canvas.style.width = Math.floor(viewport.width) + "px";
+      canvas.style.height = Math.floor(viewport.height) + "px";
+
+      const badge = document.createElement("span");
+      badge.className = "pdf-page-number";
+      badge.textContent = pageNumber + " / " + pdf.numPages;
+
+      wrap.appendChild(canvas);
+      wrap.appendChild(badge);
+      pagesRoot.appendChild(wrap);
+
+      const context = canvas.getContext("2d");
+      await page.render({
+        canvasContext: context,
+        viewport,
+        transform: pixelRatio === 1 ? null : [pixelRatio, 0, 0, pixelRatio, 0, 0]
+      }).promise;
+    }
+
+    if (token !== state.pdfRenderToken) return;
+    status.hidden = true;
+  } catch (error) {
+    if (token !== state.pdfRenderToken) return;
+    pagesRoot.innerHTML = "";
+    status.hidden = false;
+    status.classList.add("error");
+    status.textContent = "ERRO AO ABRIR PDF: " + (error.message || error);
+  }
 }
 
 function closePdfDocument() {
   const modal = $("pdfModal");
-  const frame = $("pdfFrame");
-  if (!modal || !frame) return;
+  const status = $("pdfViewerStatus");
+  const pagesRoot = $("pdfViewerPages");
+  if (!modal) return;
+
+  state.pdfRenderToken += 1;
   modal.classList.remove("open");
   modal.setAttribute("aria-hidden", "true");
-  frame.src = "about:blank";
+
+  if (pagesRoot) pagesRoot.innerHTML = "";
+  if (status) {
+    status.hidden = false;
+    status.classList.remove("error");
+    status.textContent = "AGUARDANDO DOCUMENTO...";
+  }
 }
 
 function initPdfModal() {
