@@ -235,7 +235,7 @@ async function openWorkforceMvp() {
     window.open(status.localUrl, "_blank", "noopener,noreferrer");
   } catch (error) {
     toast(error.message || "Não foi possível abrir o Workforce.", true);
-    terminal("erro ao abrir Workforce: " + (error.message || error));
+    terminal("erro ao abrir Workforce: " + (error.message || error), "error");
   }
 }
 
