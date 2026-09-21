@@ -1,5 +1,26 @@
 {
   "title": "CENTRAL RPA",
   "subtitle": "LOCAL AUTOMATION NODE // 127.0.0.1",
-  "robots": []
+  "robots": [
+    {
+      "id": "robo-precos",
+      "name": "Auditoria de Preços",
+      "description": "Coleta os totalizadores do PDA e preenche a planilha Controle de Auditoria de Preços.",
+      "category": "AUDITORIA",
+      "symbol": "R$",
+      "enabled": true,
+      "command": "robots\\robo-precos\\RoboPrecos.cmd",
+      "repositoryZip": "https://github.com/wagnerdante2-png/robo-precos/archive/refs/heads/main.zip"
+    },
+    {
+      "id": "robo-horas",
+      "name": "BI → WhatsApp",
+      "description": "Extrai e trata o relatório do BI e executa o fluxo de disparo pelo WhatsApp.",
+      "category": "COMUNICACAO",
+      "symbol": ">>",
+      "enabled": true,
+      "command": "robots\\robo-horas\\RoboHoras.cmd",
+      "repositoryZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/main.zip"
+    }
+  ]
 }
