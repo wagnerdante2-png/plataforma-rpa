@@ -28,7 +28,29 @@
     {
       "id": "workforce-operacional",
       "label": "Workforce Operacional",
-      "children": [],
+      "children": [
+        {
+          "id": "workforce-abrir-mvp",
+          "label": "ABRIR MVP",
+          "action": {
+            "type": "workforce-mvp"
+          },
+          "children": [],
+          "documents": []
+        },
+        {
+          "id": "workforce-documentacao",
+          "label": "Documentação",
+          "children": [],
+          "documents": []
+        },
+        {
+          "id": "workforce-historico",
+          "label": "Histórico do Projeto",
+          "children": [],
+          "documents": []
+        }
+      ],
       "documents": []
     }
   ]
