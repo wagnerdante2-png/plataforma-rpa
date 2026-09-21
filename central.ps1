@@ -5,6 +5,8 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $WebRoot = Join-Path $Root "web"
 $RobotsFile = Join-Path $Root "robots.json"
 $LogDirectory = Join-Path $Root "logs"
+$RobotDirectory = Join-Path $Root "robots"
+$RuntimeDirectory = Join-Path $Root "runtime"
 $Port = 8765
 $BaseUrl = "http://127.0.0.1:$Port/"
 $CRLF = ([char]13).ToString() + ([char]10).ToString()
@@ -17,6 +19,8 @@ function Ensure-Directory {
 }
 
 Ensure-Directory $LogDirectory
+Ensure-Directory $RobotDirectory
+Ensure-Directory $RuntimeDirectory
 $LogFile = Join-Path $LogDirectory ("central_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 
 function Write-CentralLog {
@@ -51,13 +55,19 @@ function Get-RobotsPayload {
             $enabled = [bool]$robot.enabled
         }
 
+        $installed = (-not [string]::IsNullOrWhiteSpace($path)) -and (Test-Path -LiteralPath $path)
+        $installable = $robot.PSObject.Properties.Name -contains "repositoryZip" -and -not [string]::IsNullOrWhiteSpace([string]$robot.repositoryZip)
+
         $result += [PSCustomObject]@{
             id = [string]$robot.id
             name = [string]$robot.name
             description = [string]$robot.description
             category = if ($robot.PSObject.Properties.Name -contains "category") { [string]$robot.category } else { "AUTOMACAO" }
+            symbol = if ($robot.PSObject.Properties.Name -contains "symbol") { [string]$robot.symbol } else { ">_" }
             enabled = $enabled
-            available = (-not [string]::IsNullOrWhiteSpace($path)) -and (Test-Path -LiteralPath $path)
+            installed = $installed
+            installable = $installable
+            available = $enabled -and ($installed -or $installable)
         }
     }
 
@@ -65,6 +75,69 @@ function Get-RobotsPayload {
         title = [string]$config.title
         subtitle = [string]$config.subtitle
         robots = $result
+    }
+}
+
+function Ensure-RobotInstalled {
+    param($Robot)
+
+    $commandPath = Resolve-RobotCommand ([string]$Robot.command)
+    if (Test-Path -LiteralPath $commandPath) {
+        return $commandPath
+    }
+
+    $hasSource = $Robot.PSObject.Properties.Name -contains "repositoryZip"
+    if (-not $hasSource -or [string]::IsNullOrWhiteSpace([string]$Robot.repositoryZip)) {
+        throw "Robo nao esta instalado e nao possui fonte de instalacao configurada: $([string]$Robot.id)"
+    }
+
+    $installDir = Split-Path -Parent $commandPath
+    $installParent = Split-Path -Parent $installDir
+    Ensure-Directory $installParent
+
+    if (Test-Path -LiteralPath $installDir) {
+        $recoveryDir = Join-Path $RobotDirectory "_recovery"
+        Ensure-Directory $recoveryDir
+        $recoveryPath = Join-Path $recoveryDir ("{0}_{1}" -f [string]$Robot.id, (Get-Date -Format "yyyyMMdd_HHmmss"))
+        Write-CentralLog ("Instalacao incompleta encontrada para {0}. Movendo para {1}" -f [string]$Robot.id, $recoveryPath) "AVISO"
+        Move-Item -LiteralPath $installDir -Destination $recoveryPath -Force
+    }
+
+    $token = [Guid]::NewGuid().ToString("N")
+    $tempDir = Join-Path $RuntimeDirectory ("install_" + $token)
+    $zipPath = Join-Path $tempDir "robot.zip"
+    $extractDir = Join-Path $tempDir "extract"
+
+    Ensure-Directory $tempDir
+    Ensure-Directory $extractDir
+
+    try {
+        Write-CentralLog ("Acoplando robo {0} a partir de {1}" -f [string]$Robot.id, [string]$Robot.repositoryZip)
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri ([string]$Robot.repositoryZip) -OutFile $zipPath -UseBasicParsing
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $extractDir -Force
+
+        $sourceRoot = Get-ChildItem -LiteralPath $extractDir -Directory | Select-Object -First 1
+        if (-not $sourceRoot) {
+            throw "Pacote do robo nao possui uma pasta raiz reconhecivel."
+        }
+
+        Ensure-Directory $installDir
+        Get-ChildItem -LiteralPath $sourceRoot.FullName -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $installDir -Recurse -Force
+        }
+
+        if (-not (Test-Path -LiteralPath $commandPath)) {
+            throw "Pacote baixado, mas o launcher esperado nao foi encontrado: $commandPath"
+        }
+
+        Write-CentralLog ("Robo {0} acoplado com sucesso em {1}" -f [string]$Robot.id, $installDir)
+        return $commandPath
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempDir) {
+            try { Remove-Item -LiteralPath $tempDir -Recurse -Force } catch {}
+        }
     }
 }
 
@@ -79,9 +152,9 @@ function Start-Robot {
     if ($robot.PSObject.Properties.Name -contains "enabled") { $enabled = [bool]$robot.enabled }
     if (-not $enabled) { throw "Robo desabilitado: $Id" }
 
-    $commandPath = Resolve-RobotCommand ([string]$robot.command)
+    $commandPath = Ensure-RobotInstalled -Robot $robot
     if ([string]::IsNullOrWhiteSpace($commandPath) -or -not (Test-Path -LiteralPath $commandPath)) {
-        throw "Executavel do robo nao encontrado: $commandPath"
+        throw "Executavel do robo nao encontrado apos acoplamento: $commandPath"
     }
 
     $workingDirectory = Split-Path -Parent $commandPath
@@ -104,6 +177,7 @@ function Start-Robot {
         id = $Id
         name = [string]$robot.name
         startedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        installed = $true
     }
 }
 
