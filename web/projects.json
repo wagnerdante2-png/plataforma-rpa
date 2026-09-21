@@ -10,7 +10,29 @@
     {
       "id": "zanthus-pdv",
       "label": "Zanthus - PDV",
-      "children": [],
+      "children": [
+        {
+          "id": "zanthus-base-historica",
+          "label": "Base Histórica",
+          "children": [],
+          "documents": [
+            {
+              "title": "Projeto Plano - Frente de Loja",
+              "path": "zanthus-pdv/Projeto Plano.pptx",
+              "kind": "local-file",
+              "badge": "PPTX"
+            },
+            {
+              "title": "Kickoff - Zanthus - Fase I",
+              "file": "/archive/projetos/zanthus-pdv/kickoff - zanthus - fase I.pdf"
+            },
+            {
+              "title": "Mapeamento Zanthus",
+              "file": "/archive/projetos/zanthus-pdv/mapeamento zanthus.pptx.pdf"
+            }
+          ]
+        }
+      ],
       "documents": []
     },
     {
