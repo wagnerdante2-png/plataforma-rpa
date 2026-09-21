@@ -4,6 +4,7 @@ const state = {
   robots: [],
   busy: new Set(),
   processCatalog: [],
+  projectCatalog: [],
   pdfRenderToken: 0
 };
 
@@ -191,6 +192,36 @@ async function loadResources() {
       adherenceCard.href = "#";
       $("adherenceAppAction").textContent = "INDISPONÍVEL";
     }
+  }
+}
+
+async function loadProjectCatalog() {
+  try {
+    const response = await fetch("/projects.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("Catálogo de projetos indisponível.");
+    const data = await response.json();
+    state.projectCatalog = Array.isArray(data.projects) ? data.projects : [];
+    renderProjectTree();
+  } catch (error) {
+    const root = $("projectTree");
+    if (root) {
+      root.innerHTML = '<div class="side-placeholder"><strong>CATÁLOGO INDISPONÍVEL</strong><p>' + escapeHtml(error.message) + '</p></div>';
+    }
+  }
+}
+
+function renderProjectTree() {
+  const root = $("projectTree");
+  if (!root) return;
+  root.innerHTML = "";
+
+  if (!state.projectCatalog.length) {
+    root.innerHTML = '<div class="side-placeholder"><strong>SEM PROJETOS</strong><p>Nenhum projeto foi cadastrado.</p></div>';
+    return;
+  }
+
+  for (const project of state.projectCatalog) {
+    root.appendChild(createProcessNode(project, 0));
   }
 }
 
@@ -476,6 +507,7 @@ async function boot() {
   initSidePanels();
   initPdfModal();
   loadProcessCatalog().catch(() => {});
+  loadProjectCatalog().catch(() => {});
 
   const scaleCard = $("scaleDownloadCard");
   if (scaleCard) {
