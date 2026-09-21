@@ -8,6 +8,8 @@ $LogDirectory = Join-Path $Root "logs"
 $RobotDirectory = Join-Path $Root "robots"
 $RuntimeDirectory = Join-Path $Root "runtime"
 $DownloadDirectory = Join-Path $Root "downloads"
+$ArchiveDirectory = Join-Path $Root "archive"
+$ProcessArchiveDirectory = Join-Path $ArchiveDirectory "processos"
 $AppDirectory = Join-Path $Root "apps"
 $AdherenceAppId = "aderencia-escala"
 $AdherenceAppDirectory = Join-Path $AppDirectory $AdherenceAppId
@@ -30,6 +32,8 @@ Ensure-Directory $LogDirectory
 Ensure-Directory $RobotDirectory
 Ensure-Directory $RuntimeDirectory
 Ensure-Directory $DownloadDirectory
+Ensure-Directory $ArchiveDirectory
+Ensure-Directory $ProcessArchiveDirectory
 Ensure-Directory $AppDirectory
 $LogFile = Join-Path $LogDirectory ("central_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 
@@ -345,6 +349,7 @@ function Get-ContentType {
         ".json" { return "application/json; charset=utf-8" }
         ".svg"  { return "image/svg+xml" }
         ".png"  { return "image/png" }
+        ".pdf"  { return "application/pdf" }
         default { return "application/octet-stream" }
     }
 }
@@ -440,6 +445,26 @@ function Send-StaticFile {
     Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType (Get-ContentType $filePath)
 }
 
+function Send-ArchiveFile {
+    param([System.IO.Stream]$Stream, [string]$RequestPath)
+
+    $prefix = "/archive/processos/"
+    $relative = $RequestPath.Substring($prefix.Length)
+    $relative = [Uri]::UnescapeDataString($relative)
+
+    $archiveFull = [IO.Path]::GetFullPath($ProcessArchiveDirectory)
+    $filePath = [IO.Path]::GetFullPath((Join-Path $ProcessArchiveDirectory $relative))
+
+    if (-not $filePath.StartsWith($archiveFull, [StringComparison]::OrdinalIgnoreCase) -or
+        -not (Test-Path -LiteralPath $filePath -PathType Leaf) -or
+        ([IO.Path]::GetExtension($filePath).ToLowerInvariant() -ne ".pdf")) {
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{ ok = $false; message = "Documento nao encontrado." }
+        return
+    }
+
+    Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType "application/pdf"
+}
+
 function Handle-Request {
     param([System.IO.Stream]$Stream, $Request)
 
@@ -477,6 +502,11 @@ function Handle-Request {
             Write-CentralLog $_.Exception.Message "ERRO"
             Write-JsonResponse -Stream $Stream -StatusCode 400 -Object @{ ok = $false; message = $_.Exception.Message }
         }
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/archive/processos/", [StringComparison]::OrdinalIgnoreCase)) {
+        Send-ArchiveFile -Stream $Stream -RequestPath $pathOnly
         return
     }
 
