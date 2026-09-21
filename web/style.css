@@ -697,11 +697,75 @@ h1 {
   background: #0a0a0a;
 }
 
-.pdf-modal-body iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
+.pdf-modal-body {
+  position: relative;
+  overflow: auto;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(5,10,7,.98), rgba(1,4,2,.99));
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82,255,135,.45) rgba(2,9,4,.70);
+}
+
+.pdf-modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.pdf-modal-body::-webkit-scrollbar-track {
+  background: rgba(2,9,4,.70);
+}
+
+.pdf-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(82,255,135,.45);
+  border: 2px solid rgba(2,9,4,.70);
+}
+
+.pdf-viewer-status {
+  min-height: 52px;
+  display: grid;
+  place-items: center;
+  color: var(--green-soft);
+  font: 700 11px/1.4 Consolas, "Cascadia Mono", monospace;
+  letter-spacing: .08em;
+}
+
+.pdf-viewer-status.error {
+  color: #ff7272;
+}
+
+.pdf-viewer-status[hidden] {
+  display: none;
+}
+
+.pdf-viewer-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.pdf-page-wrap {
+  position: relative;
+  max-width: 100%;
   background: #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.38), 0 0 0 1px rgba(82,255,135,.08);
+}
+
+.pdf-page-wrap canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.pdf-page-number {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 6px;
+  background: rgba(0,0,0,.62);
+  color: #c7ffd3;
+  font: 700 9px/1 Consolas, monospace;
+  letter-spacing: .05em;
 }
 
 .dashboard {
