@@ -236,10 +236,12 @@ h1 {
 .terminal-body .muted { color: var(--muted); }
 
 .process-library {
-  width: 30%;
-  min-width: 390px;
+  width: 100%;
   margin: 0 0 14px;
   flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .process-library-card {
@@ -322,6 +324,25 @@ h1 {
 
 .process-library-card:hover .process-library-action strong {
   transform: translateX(4px);
+}
+
+.process-library-card.resource-disabled {
+  opacity: .56;
+  cursor: default;
+  border-color: rgba(82,255,135,.16);
+}
+
+.process-library-card.resource-disabled:hover {
+  transform: none;
+  border-color: rgba(82,255,135,.16);
+  background: linear-gradient(90deg, rgba(3,18,8,.92), rgba(2,10,5,.78));
+  box-shadow:
+    inset 0 0 36px rgba(82,255,135,.025),
+    0 14px 36px rgba(0,0,0,.18);
+}
+
+.process-library-card.resource-disabled .process-library-icon {
+  background: rgba(82,255,135,.52);
 }
 
 .dashboard {
@@ -612,7 +633,7 @@ footer * {
     overflow: visible;
   }
   .hero { grid-template-columns: 1fr; padding-top: 24px; }
-  .process-library { width: 100%; min-width: 0; }
+  .process-library { grid-template-columns: 1fr; }
   .topbar, .section-title, footer { align-items: flex-start; flex-direction: column; }
   .node-state { align-self: stretch; }
 
