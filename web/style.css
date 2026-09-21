@@ -396,6 +396,7 @@ h1 {
 footer {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 18px;
   margin-top: 28px;
   padding: 15px 2px 0;
