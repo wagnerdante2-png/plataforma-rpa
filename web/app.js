@@ -195,6 +195,41 @@ async function loadResources() {
   }
 }
 
+async function openWorkforceMvp() {
+  try {
+    const status = await api("/api/workforce");
+    const target = status.installed ? status.localUrl : status.fallbackUrl;
+
+    if (!target) {
+      throw new Error("Frontend do Workforce indisponível.");
+    }
+
+    terminal(
+      status.installed
+        ? "Workforce Operacional: abrindo snapshot local."
+        : "Workforce Operacional: snapshot local ainda não empacotado; abrindo fonte histórica externa."
+    );
+
+    window.open(target, "_blank", "noopener,noreferrer");
+  } catch (error) {
+    toast(error.message || "Não foi possível abrir o Workforce.", true);
+    terminal("erro ao abrir Workforce: " + (error.message || error));
+  }
+}
+
+function runProjectAction(action) {
+  if (!action || !action.type) return;
+
+  if (action.type === "workforce-mvp") {
+    openWorkforceMvp();
+    return;
+  }
+
+  if (action.type === "external" && action.url) {
+    window.open(action.url, "_blank", "noopener,noreferrer");
+  }
+}
+
 async function loadProjectCatalog() {
   try {
     const response = await fetch("/projects.json", { cache: "no-store" });
@@ -255,7 +290,8 @@ function createProcessNode(node, depth = 0) {
 
   const children = Array.isArray(node.children) ? node.children : [];
   const documents = Array.isArray(node.documents) ? node.documents : [];
-  const hasNested = children.length > 0 || documents.length > 0;
+  const hasAction = Boolean(node.action);
+  const hasNested = children.length > 0 || documents.length > 0 || hasAction;
   const total = countProcessItems(node);
 
   const toggle = document.createElement("button");
@@ -294,6 +330,11 @@ function createProcessNode(node, depth = 0) {
     wrapper.appendChild(nested);
 
     toggle.addEventListener("click", () => {
+      if (node.action) {
+        runProjectAction(node.action);
+        return;
+      }
+
       const isOpen = wrapper.classList.toggle("open");
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
     });
