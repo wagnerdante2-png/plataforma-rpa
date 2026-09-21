@@ -8,6 +8,11 @@ $LogDirectory = Join-Path $Root "logs"
 $RobotDirectory = Join-Path $Root "robots"
 $RuntimeDirectory = Join-Path $Root "runtime"
 $DownloadDirectory = Join-Path $Root "downloads"
+$AppDirectory = Join-Path $Root "apps"
+$AdherenceAppId = "aderencia-escala"
+$AdherenceAppDirectory = Join-Path $AppDirectory $AdherenceAppId
+$AdherenceIndexPath = Join-Path $AdherenceAppDirectory "index.html"
+$AdherenceRepositoryZip = "https://github.com/wagnerdante2-png/aderencia-escala/archive/refs/heads/main.zip"
 $ScaleFileName = "Escala de Folgas.xlsm"
 $ScaleFilePath = Join-Path $DownloadDirectory $ScaleFileName
 $Port = 8765
@@ -25,6 +30,7 @@ Ensure-Directory $LogDirectory
 Ensure-Directory $RobotDirectory
 Ensure-Directory $RuntimeDirectory
 Ensure-Directory $DownloadDirectory
+Ensure-Directory $AppDirectory
 $LogFile = Join-Path $LogDirectory ("central_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 
 function Write-CentralLog {
@@ -185,6 +191,83 @@ function Start-Robot {
     }
 }
 
+function Ensure-AdherenceAppInstalled {
+    if (Test-Path -LiteralPath $AdherenceIndexPath -PathType Leaf) {
+        return $AdherenceAppDirectory
+    }
+
+    if (Test-Path -LiteralPath $AdherenceAppDirectory) {
+        $recoveryDir = Join-Path $AppDirectory "_recovery"
+        Ensure-Directory $recoveryDir
+        $recoveryPath = Join-Path $recoveryDir ("aderencia-escala_" + (Get-Date -Format "yyyyMMdd_HHmmss"))
+        Write-CentralLog ("Instalacao incompleta da Aderencia encontrada. Movendo para " + $recoveryPath) "AVISO"
+        Move-Item -LiteralPath $AdherenceAppDirectory -Destination $recoveryPath -Force
+    }
+
+    $token = [Guid]::NewGuid().ToString("N")
+    $tempDir = Join-Path $RuntimeDirectory ("app_" + $token)
+    $zipPath = Join-Path $tempDir "aderencia.zip"
+    $extractDir = Join-Path $tempDir "extract"
+
+    Ensure-Directory $tempDir
+    Ensure-Directory $extractDir
+
+    try {
+        Write-CentralLog ("Acoplando app aderencia-escala a partir de " + $AdherenceRepositoryZip)
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $AdherenceRepositoryZip -OutFile $zipPath -UseBasicParsing
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $extractDir -Force
+
+        $sourceRoot = Get-ChildItem -LiteralPath $extractDir -Directory | Select-Object -First 1
+        if (-not $sourceRoot) {
+            throw "Pacote da Aderencia nao possui uma pasta raiz reconhecivel."
+        }
+
+        Ensure-Directory $AdherenceAppDirectory
+        Get-ChildItem -LiteralPath $sourceRoot.FullName -Force | Where-Object {
+            $_.Name -notin @(".github", "tests")
+        } | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $AdherenceAppDirectory -Recurse -Force
+        }
+
+        if (-not (Test-Path -LiteralPath $AdherenceIndexPath -PathType Leaf)) {
+            throw "Pacote baixado, mas index.html da Aderencia nao foi encontrado."
+        }
+
+        Write-CentralLog ("App aderencia-escala acoplado com sucesso em " + $AdherenceAppDirectory)
+        return $AdherenceAppDirectory
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempDir) {
+            try { Remove-Item -LiteralPath $tempDir -Recurse -Force } catch {}
+        }
+    }
+}
+
+function Send-AppStaticFile {
+    param(
+        [System.IO.Stream]$Stream,
+        [string]$RequestPath
+    )
+
+    [void](Ensure-AdherenceAppInstalled)
+
+    $prefix = "/apps/aderencia-escala"
+    $relative = $RequestPath.Substring($prefix.Length).TrimStart("/")
+    if ([string]::IsNullOrWhiteSpace($relative)) { $relative = "index.html" }
+    $relative = [Uri]::UnescapeDataString($relative)
+
+    $appFull = [IO.Path]::GetFullPath($AdherenceAppDirectory)
+    $filePath = [IO.Path]::GetFullPath((Join-Path $AdherenceAppDirectory $relative))
+
+    if (-not $filePath.StartsWith($appFull, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{ ok = $false; message = "Arquivo da Aderencia nao encontrado." }
+        return
+    }
+
+    Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType (Get-ContentType $filePath)
+}
+
 function Get-ResourcesPayload {
     $scaleAvailable = Test-Path -LiteralPath $ScaleFilePath -PathType Leaf
     $scaleSize = 0
@@ -192,6 +275,8 @@ function Get-ResourcesPayload {
     if ($scaleAvailable) {
         $scaleSize = (Get-Item -LiteralPath $ScaleFilePath).Length
     }
+
+    $adherenceInstalled = Test-Path -LiteralPath $AdherenceIndexPath -PathType Leaf
 
     return [PSCustomObject]@{
         scale = [PSCustomObject]@{
@@ -201,6 +286,14 @@ function Get-ResourcesPayload {
             available = $scaleAvailable
             sizeBytes = $scaleSize
             downloadUrl = "/download/escala-folgas"
+        }
+        adherence = [PSCustomObject]@{
+            id = "aderencia-escala"
+            name = "Aderencia de Escala"
+            installed = $adherenceInstalled
+            installable = $true
+            available = $true
+            openUrl = "/apps/aderencia-escala/"
         }
     }
 }
@@ -379,6 +472,17 @@ function Handle-Request {
             $id = [string]$payload.id
             if ([string]::IsNullOrWhiteSpace($id)) { throw "ID do robo nao informado." }
             Write-JsonResponse -Stream $Stream -StatusCode 200 -Object (Start-Robot -Id $id)
+        }
+        catch {
+            Write-CentralLog $_.Exception.Message "ERRO"
+            Write-JsonResponse -Stream $Stream -StatusCode 400 -Object @{ ok = $false; message = $_.Exception.Message }
+        }
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/apps/aderencia-escala", [StringComparison]::OrdinalIgnoreCase)) {
+        try {
+            Send-AppStaticFile -Stream $Stream -RequestPath $pathOnly
         }
         catch {
             Write-CentralLog $_.Exception.Message "ERRO"
