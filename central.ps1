@@ -15,6 +15,9 @@ $AdherenceAppId = "aderencia-escala"
 $AdherenceAppDirectory = Join-Path $AppDirectory $AdherenceAppId
 $AdherenceIndexPath = Join-Path $AdherenceAppDirectory "index.html"
 $AdherenceRepositoryZip = "https://github.com/wagnerdante2-png/aderencia-escala/archive/refs/heads/main.zip"
+$WorkforceAppDirectory = Join-Path $AppDirectory "workforce-operacional"
+$WorkforceIndexPath = Join-Path $WorkforceAppDirectory "index.html"
+$WorkforceFallbackUrl = "https://ai.studio/apps/a1ba9953-7e4d-43ed-8f31-5357a3c7d90c"
 $ScaleFileName = "Escala de Folgas.xlsm"
 $ScaleFilePath = Join-Path $DownloadDirectory $ScaleFileName
 $Port = 8765
@@ -270,6 +273,45 @@ function Send-AppStaticFile {
     }
 
     Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType (Get-ContentType $filePath)
+}
+
+function Send-WorkforceStaticFile {
+    param(
+        [System.IO.Stream]$Stream,
+        [string]$RequestPath
+    )
+
+    if (-not (Test-Path -LiteralPath $WorkforceIndexPath -PathType Leaf)) {
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{ ok = $false; message = "Snapshot local do Workforce ainda nao foi empacotado." }
+        return
+    }
+
+    $prefix = "/apps/workforce-operacional"
+    $relative = $RequestPath.Substring($prefix.Length).TrimStart("/")
+    if ([string]::IsNullOrWhiteSpace($relative)) { $relative = "index.html" }
+    $relative = [Uri]::UnescapeDataString($relative)
+
+    $appFull = [IO.Path]::GetFullPath($WorkforceAppDirectory)
+    $filePath = [IO.Path]::GetFullPath((Join-Path $WorkforceAppDirectory $relative))
+
+    if (-not $filePath.StartsWith($appFull, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{ ok = $false; message = "Arquivo do Workforce nao encontrado." }
+        return
+    }
+
+    Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType (Get-ContentType $filePath)
+}
+
+function Get-WorkforcePayload {
+    $installed = Test-Path -LiteralPath $WorkforceIndexPath -PathType Leaf
+    return [PSCustomObject]@{
+        id = "workforce-operacional"
+        installed = $installed
+        localUrl = "/apps/workforce-operacional/"
+        fallbackUrl = $WorkforceFallbackUrl
+        sourceRef = "checkpoint/dprh-certified-stable-20260813"
+        sourceCommit = "3dfac9d61252b149643cbde23a15ae2067b91357"
+    }
 }
 
 function Get-ResourcesPayload {
@@ -541,6 +583,11 @@ function Handle-Request {
         return
     }
 
+    if ($Request.Method -eq "GET" -and $pathOnly -eq "/api/workforce") {
+        Write-JsonResponse -Stream $Stream -StatusCode 200 -Object (Get-WorkforcePayload)
+        return
+    }
+
     if ($Request.Method -eq "GET" -and $pathOnly -eq "/api/resources") {
         Write-JsonResponse -Stream $Stream -StatusCode 200 -Object (Get-ResourcesPayload)
         return
@@ -568,6 +615,11 @@ function Handle-Request {
 
     if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/archive/processos/", [StringComparison]::OrdinalIgnoreCase)) {
         Send-ArchiveFile -Stream $Stream -RequestPath $pathOnly
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/apps/workforce-operacional", [StringComparison]::OrdinalIgnoreCase)) {
+        Send-WorkforceStaticFile -Stream $Stream -RequestPath $pathOnly
         return
     }
 
