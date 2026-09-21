@@ -17,7 +17,6 @@ $AdherenceIndexPath = Join-Path $AdherenceAppDirectory "index.html"
 $AdherenceRepositoryZip = "https://github.com/wagnerdante2-png/aderencia-escala/archive/refs/heads/main.zip"
 $WorkforceAppDirectory = Join-Path $AppDirectory "workforce-operacional"
 $WorkforceIndexPath = Join-Path $WorkforceAppDirectory "index.html"
-$WorkforceFallbackUrl = "https://ai.studio/apps/a1ba9953-7e4d-43ed-8f31-5357a3c7d90c"
 $ScaleFileName = "Escala de Folgas.xlsm"
 $ScaleFilePath = Join-Path $DownloadDirectory $ScaleFileName
 $Port = 8765
@@ -308,7 +307,6 @@ function Get-WorkforcePayload {
         id = "workforce-operacional"
         installed = $installed
         localUrl = "/apps/workforce-operacional/"
-        fallbackUrl = $WorkforceFallbackUrl
         sourceRef = "checkpoint/dprh-certified-stable-20260813"
         sourceCommit = "3dfac9d61252b149643cbde23a15ae2067b91357"
     }
