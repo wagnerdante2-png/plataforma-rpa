@@ -410,12 +410,12 @@ footer {
   gap: 18px;
   margin-top: 28px;
   padding: 7px 12px 6px;
-  border: 1px solid rgba(82,255,135,.72);
-  background: var(--green);
+  border: 1px solid rgba(82,255,135,.56);
+  background: rgba(82,255,135,.70);
   color: #020503;
   box-shadow:
-    0 0 18px rgba(82,255,135,.10),
-    inset 0 1px 0 rgba(255,255,255,.20);
+    0 0 10px rgba(82,255,135,.05),
+    inset 0 1px 0 rgba(255,255,255,.12);
   font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif;
   font-size: 10px;
   font-weight: 400;
