@@ -22,7 +22,17 @@
     {
       "id": "identificacao-padrao",
       "label": "Identificação Padrão",
-      "children": [],
+      "children": [
+        {
+          "id": "identificacao-padrao-abrir",
+          "label": "ABRIR IDENTIFICAÇÃO PADRÃO",
+          "action": {
+            "type": "identificacao-padrao"
+          },
+          "children": [],
+          "documents": []
+        }
+      ],
       "documents": []
     },
     {
@@ -42,7 +52,12 @@
           "id": "workforce-documentacao",
           "label": "Documentação",
           "children": [],
-          "documents": []
+          "documents": [
+            {
+              "title": "Plano Diretor Workforce",
+              "file": "/archive/projetos/workforce-operacional/Plano_Diretor_Workforce_v10.2_Cumulativo_18-08-2026.pdf"
+            }
+          ]
         },
         {
           "id": "workforce-historico",
