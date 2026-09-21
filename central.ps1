@@ -10,6 +10,7 @@ $RuntimeDirectory = Join-Path $Root "runtime"
 $DownloadDirectory = Join-Path $Root "downloads"
 $ArchiveDirectory = Join-Path $Root "archive"
 $ProcessArchiveDirectory = Join-Path $ArchiveDirectory "processos"
+$ProjectArchiveDirectory = Join-Path $ArchiveDirectory "projetos"
 $AppDirectory = Join-Path $Root "apps"
 $AdherenceAppId = "aderencia-escala"
 $AdherenceAppDirectory = Join-Path $AppDirectory $AdherenceAppId
@@ -17,6 +18,7 @@ $AdherenceIndexPath = Join-Path $AdherenceAppDirectory "index.html"
 $AdherenceRepositoryZip = "https://github.com/wagnerdante2-png/aderencia-escala/archive/refs/heads/main.zip"
 $WorkforceAppDirectory = Join-Path $AppDirectory "workforce-operacional"
 $WorkforceIndexPath = Join-Path $WorkforceAppDirectory "index.html"
+$IdentificationStandardUrl = "file://fs1maravilhas.file.core.windows.net/publico/SharepointTI/CGOCRYPT/cgo861.html"
 $ScaleFileName = "Escala de Folgas.xlsm"
 $ScaleFilePath = Join-Path $DownloadDirectory $ScaleFileName
 $Port = 8765
@@ -36,6 +38,7 @@ Ensure-Directory $RuntimeDirectory
 Ensure-Directory $DownloadDirectory
 Ensure-Directory $ArchiveDirectory
 Ensure-Directory $ProcessArchiveDirectory
+Ensure-Directory $ProjectArchiveDirectory
 Ensure-Directory $AppDirectory
 $LogFile = Join-Path $LogDirectory ("central_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 
@@ -752,6 +755,100 @@ function Send-ArchiveFile {
     }
 }
 
+function Resolve-ProjectArchiveFile {
+    param([string]$RelativePath)
+
+    $primary = [IO.Path]::GetFullPath((Join-Path $ProjectArchiveDirectory $RelativePath))
+    if (Test-Path -LiteralPath $primary -PathType Leaf) {
+        return $primary
+    }
+
+    $rootParent = Split-Path -Parent $Root
+    $rootGrandParent = if ($rootParent) { Split-Path -Parent $rootParent } else { $null }
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    foreach ($base in @($Root, $rootParent, $rootGrandParent)) {
+        if ([string]::IsNullOrWhiteSpace($base) -or -not (Test-Path -LiteralPath $base -PathType Container)) { continue }
+
+        $direct = Join-Path (Join-Path $base "archive\projetos") $RelativePath
+        $candidates.Add($direct)
+
+        foreach ($dir in @(Get-ChildItem -LiteralPath $base -Directory -ErrorAction SilentlyContinue)) {
+            $candidateA = Join-Path (Join-Path $dir.FullName "archive\projetos") $RelativePath
+            $candidates.Add($candidateA)
+
+            $candidateB = Join-Path (Join-Path (Join-Path $dir.FullName "plataforma-rpa-main") "archive\projetos") $RelativePath
+            $candidates.Add($candidateB)
+        }
+    }
+
+    foreach ($candidate in $candidates) {
+        try {
+            $full = [IO.Path]::GetFullPath($candidate)
+            if (Test-Path -LiteralPath $full -PathType Leaf) {
+                Write-CentralLog ("Documento de projeto localizado fora da pasta atual: " + $full) "AVISO"
+                return $full
+            }
+        }
+        catch {}
+    }
+
+    return $null
+}
+
+function Send-ProjectArchiveFile {
+    param(
+        [System.IO.Stream]$Stream,
+        [string]$RequestPath
+    )
+
+    $prefix = "/archive/projetos/"
+    $relative = $RequestPath.Substring($prefix.Length)
+    $relative = [Uri]::UnescapeDataString($relative)
+
+    $filePath = Resolve-ProjectArchiveFile -RelativePath $relative
+
+    if ([string]::IsNullOrWhiteSpace($filePath) -or
+        -not (Test-Path -LiteralPath $filePath -PathType Leaf) -or
+        ([IO.Path]::GetExtension($filePath).ToLowerInvariant() -ne ".pdf")) {
+        $expected = [IO.Path]::GetFullPath((Join-Path $ProjectArchiveDirectory $relative))
+        Write-CentralLog ("Documento de projeto nao encontrado. Esperado em: " + $expected) "ERRO"
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{
+            ok = $false
+            message = "Documento de projeto nao encontrado no acervo local."
+            expected = $expected
+        }
+        return
+    }
+
+    try {
+        $pdfBytes = [IO.File]::ReadAllBytes($filePath)
+        Write-CentralLog ("Documento de projeto servido ao visualizador: " + $filePath)
+        Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body $pdfBytes -ContentType "application/pdf"
+    }
+    catch {
+        Write-CentralLog ("Falha ao ler documento de projeto: " + $filePath + " | " + $_.Exception.Message) "ERRO"
+        Write-JsonResponse -Stream $Stream -StatusCode 500 -Object @{
+            ok = $false
+            message = "Falha ao ler documento local do projeto."
+        }
+    }
+}
+
+function Open-IdentificationStandard {
+    try {
+        Write-CentralLog ("Abrindo Identificacao Padrao: " + $IdentificationStandardUrl)
+        Start-Process -FilePath $IdentificationStandardUrl | Out-Null
+        return [PSCustomObject]@{
+            ok = $true
+            url = $IdentificationStandardUrl
+        }
+    }
+    catch {
+        throw ("Nao foi possivel abrir Identificacao Padrao: " + $_.Exception.Message)
+    }
+}
+
 function Handle-Request {
     param([System.IO.Stream]$Stream, $Request)
 
@@ -783,6 +880,17 @@ function Handle-Request {
         return
     }
 
+    if ($Request.Method -eq "POST" -and $pathOnly -eq "/api/projects/identificacao-padrao/open") {
+        try {
+            Write-JsonResponse -Stream $Stream -StatusCode 200 -Object (Open-IdentificationStandard)
+        }
+        catch {
+            Write-CentralLog $_.Exception.Message "ERRO"
+            Write-JsonResponse -Stream $Stream -StatusCode 400 -Object @{ ok = $false; message = $_.Exception.Message }
+        }
+        return
+    }
+
     if ($Request.Method -eq "POST" -and $pathOnly -eq "/api/run") {
         try {
             $payload = $Request.Body | ConvertFrom-Json
@@ -799,6 +907,11 @@ function Handle-Request {
 
     if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/archive/processos/", [StringComparison]::OrdinalIgnoreCase)) {
         Send-ArchiveFile -Stream $Stream -RequestPath $pathOnly
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/archive/projetos/", [StringComparison]::OrdinalIgnoreCase)) {
+        Send-ProjectArchiveFile -Stream $Stream -RequestPath $pathOnly
         return
     }
 
