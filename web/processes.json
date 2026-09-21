@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "classifications": [
+    {
+      "id": "operacoes",
+      "label": "OPERAÇÕES",
+      "children": [
+        {
+          "id": "frente-caixa",
+          "label": "Frente de Caixa",
+          "documents": []
+        },
+        {
+          "id": "recebimento",
+          "label": "Recebimento",
+          "documents": []
+        },
+        {
+          "id": "fiscalizacao",
+          "label": "Fiscalização",
+          "documents": []
+        },
+        {
+          "id": "reposicao",
+          "label": "Reposição",
+          "documents": []
+        },
+        {
+          "id": "inventarios",
+          "label": "Inventários",
+          "documents": []
+        },
+        {
+          "id": "visual-merchandising",
+          "label": "Visual Merchandising",
+          "documents": []
+        },
+        {
+          "id": "precificacao",
+          "label": "Precificação",
+          "documents": []
+        },
+        {
+          "id": "validades",
+          "label": "Validades",
+          "documents": []
+        },
+        {
+          "id": "quebras",
+          "label": "Quebras",
+          "documents": []
+        },
+        {
+          "id": "uso-consumo",
+          "label": "Uso e Consumo",
+          "documents": []
+        },
+        {
+          "id": "ferramentas-gerenciais",
+          "label": "Ferramentas Gerenciais",
+          "documents": []
+        }
+      ]
+    },
+    {
+      "id": "logistica",
+      "label": "LOGÍSTICA",
+      "children": []
+    },
+    {
+      "id": "administrativos",
+      "label": "ADMINISTRATIVOS",
+      "children": [
+        {
+          "id": "ti",
+          "label": "Tecnologia da Informação",
+          "children": []
+        },
+        {
+          "id": "rh",
+          "label": "Recursos Humanos",
+          "children": []
+        },
+        {
+          "id": "marketing",
+          "label": "Marketing",
+          "children": []
+        },
+        {
+          "id": "compras",
+          "label": "Compras",
+          "children": []
+        },
+        {
+          "id": "financeiro",
+          "label": "Financeiro",
+          "children": []
+        },
+        {
+          "id": "operacoes-adm",
+          "label": "Operações",
+          "children": []
+        },
+        {
+          "id": "juridico",
+          "label": "Jurídico",
+          "children": []
+        }
+      ]
+    }
+  ]
+}
