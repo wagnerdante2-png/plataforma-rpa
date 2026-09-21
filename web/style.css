@@ -94,14 +94,40 @@ body {
   gap: 14px;
 }
 
-.brand-logo {
-  width: 170px;
-  height: 84px;
-  object-fit: cover;
-  border: 1px solid rgba(82,255,135,.34);
-  background: #020503;
-  box-shadow: 0 0 22px rgba(82,255,135,.14);
+.brand-mark {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  overflow: hidden;
+  background: var(--green);
+  border: 1px solid rgba(82,255,135,.72);
+  box-shadow:
+    0 0 20px rgba(82,255,135,.18),
+    inset 0 0 12px rgba(0,0,0,.22);
   flex: 0 0 auto;
+}
+
+.brand-mark-mdl::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  background-image: url("/assets/maravilhas-do-lar.jpg");
+  background-repeat: no-repeat;
+  background-size: 150px 75px;
+  background-position: left center;
+  filter: grayscale(1) contrast(240%) brightness(.18);
+  mix-blend-mode: multiply;
+  opacity: .96;
+}
+
+.brand-mark-mdl::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(0,0,0,.16);
+  box-shadow: inset 0 0 11px rgba(0,0,0,.22);
+  pointer-events: none;
 }
 
 h1, h2, h3, h4, p { margin: 0; }
@@ -397,14 +423,33 @@ h1 {
 footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   flex-wrap: wrap;
   gap: 18px;
   margin-top: 28px;
-  padding: 15px 2px 0;
-  border-top: 1px solid rgba(82,255,135,.14);
-  color: #416e4c;
-  font-size: 9px;
-  letter-spacing: .08em;
+  padding: 7px 12px 6px;
+  border: 1px solid rgba(82,255,135,.72);
+  background: var(--green);
+  color: #020503;
+  box-shadow:
+    0 0 18px rgba(82,255,135,.10),
+    inset 0 1px 0 rgba(255,255,255,.20);
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-shadow: none;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: none;
+}
+
+footer,
+footer * {
+  color: #020503 !important;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
 }
 
 .toast {
