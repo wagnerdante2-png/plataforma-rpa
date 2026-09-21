@@ -4,7 +4,19 @@
     {
       "id": "etiqueta-promocional",
       "label": "Etiqueta Promocional",
-      "children": [],
+      "children": [
+        {
+          "id": "etiqueta-promocional-documentacao",
+          "label": "Documentação",
+          "children": [],
+          "documents": [
+            {
+              "title": "Etiquetas Promocionais",
+              "file": "/archive/projetos/etiqueta-promocional/etiquetas.pptx.pdf"
+            }
+          ]
+        }
+      ],
       "documents": []
     },
     {
@@ -38,7 +50,19 @@
     {
       "id": "escala-folgas",
       "label": "Escala de Folgas",
-      "children": [],
+      "children": [
+        {
+          "id": "escala-folgas-documentacao",
+          "label": "Documentação",
+          "children": [],
+          "documents": [
+            {
+              "title": "Montagem da Escala",
+              "file": "/archive/projetos/escala-folgas/montagem escala.pdf"
+            }
+          ]
+        }
+      ],
       "documents": []
     },
     {
