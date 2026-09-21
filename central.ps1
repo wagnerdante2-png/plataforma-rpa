@@ -533,7 +533,7 @@ function Resolve-ProcessArchiveFile {
     $rootGrandParent = if ($rootParent) { Split-Path -Parent $rootParent } else { $null }
     $candidates = New-Object System.Collections.Generic.List[string]
 
-    foreach ($base in @($rootParent, $rootGrandParent)) {
+    foreach ($base in @($Root, $rootParent, $rootGrandParent)) {
         if ([string]::IsNullOrWhiteSpace($base) -or -not (Test-Path -LiteralPath $base -PathType Container)) { continue }
 
         $direct = Join-Path (Join-Path $base "archive\processos") $RelativePath
