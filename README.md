@@ -32,6 +32,7 @@ Nesta primeira versao o catalogo esta vazio. Os robos existentes serao conectado
 - `central.ps1` - servidor HTTP local e executor seguro.
 - `robots.json` - catalogo declarativo.
 - `web/` - interface Matrix/hacker.
+- `downloads/` - arquivos operacionais locais entregues pela Central (ignorado pelo Git).
 
 ## Seguranca
 
@@ -40,3 +41,13 @@ A Central escuta apenas em `127.0.0.1` e aceita somente IDs existentes em `robot
 ## GitHub Actions
 
 Este projeto nao utiliza GitHub Actions.
+
+## Recursos operacionais locais
+
+A Central cria automaticamente a pasta `downloads/`.
+
+Para habilitar o card **Escala de Folgas**, coloque a versão corporativa aprovada com o nome exato:
+
+`downloads/Escala de Folgas.xlsm`
+
+O arquivo não faz parte do repositório Git. No empacotamento corporativo definitivo, ele poderá compor o pacote operacional ao lado da Central.
