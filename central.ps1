@@ -7,6 +7,9 @@ $RobotsFile = Join-Path $Root "robots.json"
 $LogDirectory = Join-Path $Root "logs"
 $RobotDirectory = Join-Path $Root "robots"
 $RuntimeDirectory = Join-Path $Root "runtime"
+$DownloadDirectory = Join-Path $Root "downloads"
+$ScaleFileName = "Escala de Folgas.xlsm"
+$ScaleFilePath = Join-Path $DownloadDirectory $ScaleFileName
 $Port = 8765
 $BaseUrl = "http://127.0.0.1:$Port/"
 $CRLF = ([char]13).ToString() + ([char]10).ToString()
@@ -21,6 +24,7 @@ function Ensure-Directory {
 Ensure-Directory $LogDirectory
 Ensure-Directory $RobotDirectory
 Ensure-Directory $RuntimeDirectory
+Ensure-Directory $DownloadDirectory
 $LogFile = Join-Path $LogDirectory ("central_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 
 function Write-CentralLog {
@@ -181,6 +185,64 @@ function Start-Robot {
     }
 }
 
+function Get-ResourcesPayload {
+    $scaleAvailable = Test-Path -LiteralPath $ScaleFilePath -PathType Leaf
+    $scaleSize = 0
+
+    if ($scaleAvailable) {
+        $scaleSize = (Get-Item -LiteralPath $ScaleFilePath).Length
+    }
+
+    return [PSCustomObject]@{
+        scale = [PSCustomObject]@{
+            id = "escala-folgas"
+            name = "Escala de Folgas"
+            fileName = $ScaleFileName
+            available = $scaleAvailable
+            sizeBytes = $scaleSize
+            downloadUrl = "/download/escala-folgas"
+        }
+    }
+}
+
+function Write-FileDownloadResponse {
+    param(
+        [System.IO.Stream]$Stream,
+        [string]$FilePath,
+        [string]$DownloadName
+    )
+
+    if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{ ok = $false; message = "Arquivo local indisponivel." }
+        return
+    }
+
+    $fileInfo = Get-Item -LiteralPath $FilePath
+    $safeName = $DownloadName.Replace([char]34, "")
+    $header = "HTTP/1.1 200 OK" + $CRLF +
+              "Content-Type: application/vnd.ms-excel.sheet.macroEnabled.12" + $CRLF +
+              "Content-Length: $($fileInfo.Length)" + $CRLF +
+              "Content-Disposition: attachment; filename=" + [char]34 + $safeName + [char]34 + $CRLF +
+              "Cache-Control: no-store" + $CRLF +
+              "X-Content-Type-Options: nosniff" + $CRLF +
+              "Connection: close" + $CRLF + $CRLF
+
+    $headerBytes = [Text.Encoding]::ASCII.GetBytes($header)
+    $Stream.Write($headerBytes, 0, $headerBytes.Length)
+
+    $fileStream = [IO.File]::OpenRead($FilePath)
+    try {
+        $buffer = New-Object byte[] 65536
+        while (($read = $fileStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $Stream.Write($buffer, 0, $read)
+        }
+        $Stream.Flush()
+    }
+    finally {
+        $fileStream.Dispose()
+    }
+}
+
 function Get-ContentType {
     param([string]$Path)
     switch ([IO.Path]::GetExtension($Path).ToLowerInvariant()) {
@@ -297,6 +359,17 @@ function Handle-Request {
 
     if ($Request.Method -eq "GET" -and $pathOnly -eq "/api/health") {
         Write-JsonResponse -Stream $Stream -StatusCode 200 -Object @{ ok = $true; node = "CENTRAL-RPA"; time = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $pathOnly -eq "/api/resources") {
+        Write-JsonResponse -Stream $Stream -StatusCode 200 -Object (Get-ResourcesPayload)
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $pathOnly -eq "/download/escala-folgas") {
+        Write-CentralLog ("Download solicitado: " + $ScaleFilePath)
+        Write-FileDownloadResponse -Stream $Stream -FilePath $ScaleFilePath -DownloadName "Escala_de_Folgas.xlsm"
         return
     }
 
