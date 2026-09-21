@@ -446,81 +446,6 @@ function Send-StaticFile {
     Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType (Get-ContentType $filePath)
 }
 
-function Write-InlinePdfResponse {
-    param(
-        [System.IO.Stream]$Stream,
-        [string]$FilePath,
-        $Headers
-    )
-
-    $fileInfo = Get-Item -LiteralPath $FilePath
-    $length = [long]$fileInfo.Length
-    $rangeHeader = $null
-    if ($null -ne $Headers -and $Headers.ContainsKey("range")) {
-        $rangeHeader = [string]$Headers["range"]
-    }
-
-    $startByte = [long]0
-    $endByte = $length - 1
-    $partial = $false
-
-    if (-not [string]::IsNullOrWhiteSpace($rangeHeader) -and $rangeHeader -match "^bytes=(\d*)-(\d*)$") {
-        $partial = $true
-        if (-not [string]::IsNullOrWhiteSpace($Matches[1])) { $startByte = [long]$Matches[1] }
-        if (-not [string]::IsNullOrWhiteSpace($Matches[2])) { $endByte = [long]$Matches[2] }
-        if ([string]::IsNullOrWhiteSpace($Matches[1]) -and -not [string]::IsNullOrWhiteSpace($Matches[2])) {
-            $suffixLength = [long]$Matches[2]
-            $startByte = [Math]::Max([long]0, $length - $suffixLength)
-            $endByte = $length - 1
-        }
-        if ($endByte -ge $length) { $endByte = $length - 1 }
-        if ($startByte -lt 0 -or $startByte -ge $length -or $endByte -lt $startByte) {
-            $header416 = "HTTP/1.1 416 Range Not Satisfiable" + $CRLF +
-                         "Content-Range: bytes */$length" + $CRLF +
-                         "Accept-Ranges: bytes" + $CRLF +
-                         "Connection: close" + $CRLF + $CRLF
-            $bytes416 = [Text.Encoding]::ASCII.GetBytes($header416)
-            $Stream.Write($bytes416, 0, $bytes416.Length)
-            $Stream.Flush()
-            return
-        }
-    }
-
-    $contentLength = $endByte - $startByte + 1
-    $status = if ($partial) { "HTTP/1.1 206 Partial Content" } else { "HTTP/1.1 200 OK" }
-    $safeName = $fileInfo.Name.Replace([char]34, "")
-    $header = $status + $CRLF +
-              "Content-Type: application/pdf" + $CRLF +
-              "Content-Length: $contentLength" + $CRLF +
-              "Content-Disposition: inline; filename=" + [char]34 + $safeName + [char]34 + $CRLF +
-              "Accept-Ranges: bytes" + $CRLF +
-              $(if ($partial) { "Content-Range: bytes $startByte-$endByte/$length" + $CRLF } else { "" }) +
-              "Cache-Control: no-store" + $CRLF +
-              "X-Content-Type-Options: nosniff" + $CRLF +
-              "Connection: close" + $CRLF + $CRLF
-
-    $headerBytes = [Text.Encoding]::ASCII.GetBytes($header)
-    $Stream.Write($headerBytes, 0, $headerBytes.Length)
-
-    $fileStream = [IO.File]::OpenRead($FilePath)
-    try {
-        [void]$fileStream.Seek($startByte, [IO.SeekOrigin]::Begin)
-        $remaining = [long]$contentLength
-        $buffer = New-Object byte[] 65536
-        while ($remaining -gt 0) {
-            $toRead = [int][Math]::Min([long]$buffer.Length, $remaining)
-            $read = $fileStream.Read($buffer, 0, $toRead)
-            if ($read -le 0) { break }
-            $Stream.Write($buffer, 0, $read)
-            $remaining -= $read
-        }
-        $Stream.Flush()
-    }
-    finally {
-        $fileStream.Dispose()
-    }
-}
-
 function Resolve-ProcessArchiveFile {
     param([string]$RelativePath)
 
@@ -565,8 +490,7 @@ function Resolve-ProcessArchiveFile {
 function Send-ArchiveFile {
     param(
         [System.IO.Stream]$Stream,
-        [string]$RequestPath,
-        $Headers
+        [string]$RequestPath
     )
 
     $prefix = "/archive/processos/"
@@ -588,7 +512,18 @@ function Send-ArchiveFile {
         return
     }
 
-    Write-InlinePdfResponse -Stream $Stream -FilePath $filePath -Headers $Headers
+    try {
+        $pdfBytes = [IO.File]::ReadAllBytes($filePath)
+        Write-CentralLog ("Documento servido ao visualizador: " + $filePath)
+        Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body $pdfBytes -ContentType "application/pdf"
+    }
+    catch {
+        Write-CentralLog ("Falha ao ler documento do acervo: " + $filePath + " | " + $_.Exception.Message) "ERRO"
+        Write-JsonResponse -Stream $Stream -StatusCode 500 -Object @{
+            ok = $false
+            message = "Falha ao ler documento local."
+        }
+    }
 }
 
 function Handle-Request {
@@ -632,7 +567,7 @@ function Handle-Request {
     }
 
     if ($Request.Method -eq "GET" -and $pathOnly.StartsWith("/archive/processos/", [StringComparison]::OrdinalIgnoreCase)) {
-        Send-ArchiveFile -Stream $Stream -RequestPath $pathOnly -Headers $Request.Headers
+        Send-ArchiveFile -Stream $Stream -RequestPath $pathOnly
         return
     }
 
