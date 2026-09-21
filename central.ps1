@@ -521,6 +521,47 @@ function Write-InlinePdfResponse {
     }
 }
 
+function Resolve-ProcessArchiveFile {
+    param([string]$RelativePath)
+
+    $primary = [IO.Path]::GetFullPath((Join-Path $ProcessArchiveDirectory $RelativePath))
+    if (Test-Path -LiteralPath $primary -PathType Leaf) {
+        return $primary
+    }
+
+    $rootParent = Split-Path -Parent $Root
+    $rootGrandParent = if ($rootParent) { Split-Path -Parent $rootParent } else { $null }
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    foreach ($base in @($rootParent, $rootGrandParent)) {
+        if ([string]::IsNullOrWhiteSpace($base) -or -not (Test-Path -LiteralPath $base -PathType Container)) { continue }
+
+        $direct = Join-Path (Join-Path $base "archive\processos") $RelativePath
+        $candidates.Add($direct)
+
+        foreach ($dir in @(Get-ChildItem -LiteralPath $base -Directory -ErrorAction SilentlyContinue)) {
+            $candidateA = Join-Path (Join-Path $dir.FullName "archive\processos") $RelativePath
+            $candidates.Add($candidateA)
+
+            $candidateB = Join-Path (Join-Path (Join-Path $dir.FullName "plataforma-rpa-main") "archive\processos") $RelativePath
+            $candidates.Add($candidateB)
+        }
+    }
+
+    foreach ($candidate in $candidates) {
+        try {
+            $full = [IO.Path]::GetFullPath($candidate)
+            if (Test-Path -LiteralPath $full -PathType Leaf) {
+                Write-CentralLog ("Acervo documental localizado fora da pasta atual da plataforma: " + $full) "AVISO"
+                return $full
+            }
+        }
+        catch {}
+    }
+
+    return $null
+}
+
 function Send-ArchiveFile {
     param(
         [System.IO.Stream]$Stream,
@@ -532,13 +573,18 @@ function Send-ArchiveFile {
     $relative = $RequestPath.Substring($prefix.Length)
     $relative = [Uri]::UnescapeDataString($relative)
 
-    $archiveFull = [IO.Path]::GetFullPath($ProcessArchiveDirectory)
-    $filePath = [IO.Path]::GetFullPath((Join-Path $ProcessArchiveDirectory $relative))
+    $filePath = Resolve-ProcessArchiveFile -RelativePath $relative
 
-    if (-not $filePath.StartsWith($archiveFull, [StringComparison]::OrdinalIgnoreCase) -or
+    if ([string]::IsNullOrWhiteSpace($filePath) -or
         -not (Test-Path -LiteralPath $filePath -PathType Leaf) -or
         ([IO.Path]::GetExtension($filePath).ToLowerInvariant() -ne ".pdf")) {
-        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{ ok = $false; message = "Documento nao encontrado." }
+        $expected = [IO.Path]::GetFullPath((Join-Path $ProcessArchiveDirectory $relative))
+        Write-CentralLog ("Documento do acervo nao encontrado. Esperado em: " + $expected) "ERRO"
+        Write-JsonResponse -Stream $Stream -StatusCode 404 -Object @{
+            ok = $false
+            message = "Documento nao encontrado no acervo local."
+            expected = $expected
+        }
         return
     }
 
