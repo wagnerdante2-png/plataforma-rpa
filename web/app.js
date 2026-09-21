@@ -356,11 +356,26 @@ function createProcessNode(node, depth = 0) {
       const docButton = document.createElement("button");
       docButton.type = "button";
       docButton.className = "process-document";
+
+      const fileName = String(doc.file || doc.path || "");
+      const extension = fileName.includes(".")
+        ? fileName.split(".").pop().toUpperCase()
+        : "DOC";
+      const badge = doc.badge || (doc.kind === "local-file" ? extension : "PDF");
+
       docButton.innerHTML =
-        '<span class="process-doc-icon">PDF</span>' +
+        '<span class="process-doc-icon">' + escapeHtml(badge) + '</span>' +
         '<span class="process-label">' + escapeHtml(doc.title || "Documento") + '</span>' +
         '<span class="process-count">' + escapeHtml(doc.version || "") + '</span>';
-      docButton.addEventListener("click", () => openPdfDocument(doc, node));
+
+      docButton.addEventListener("click", () => {
+        if (doc.kind === "local-file") {
+          openLocalProjectFile(doc);
+          return;
+        }
+        openPdfDocument(doc, node);
+      });
+
       nested.appendChild(docButton);
     }
 
@@ -392,6 +407,23 @@ function renderProcessTree() {
 
   for (const classification of state.processCatalog) {
     root.appendChild(createProcessNode(classification, 0));
+  }
+}
+
+async function openLocalProjectFile(doc) {
+  try {
+    const path = doc && (doc.path || doc.file);
+    if (!path) throw new Error("Arquivo de projeto não informado.");
+
+    await api("/api/projects/open-file", {
+      method: "POST",
+      body: JSON.stringify({ path })
+    });
+
+    terminal((doc.title || "Documento") + ": abrindo arquivo local.");
+  } catch (error) {
+    toast(error.message || "Não foi possível abrir o arquivo do projeto.", true);
+    terminal("erro ao abrir arquivo do projeto: " + (error.message || error), "error");
   }
 }
 
