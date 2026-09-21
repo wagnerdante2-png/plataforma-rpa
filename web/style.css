@@ -229,6 +229,92 @@ h1 {
 .terminal-body .ok { color: var(--green); }
 .terminal-body .muted { color: var(--muted); }
 
+.process-library {
+  margin: 0 0 28px;
+}
+
+.process-library-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 92px;
+  padding: 16px 18px;
+  border: 1px solid rgba(82,255,135,.28);
+  border-left: 3px solid var(--green);
+  background: linear-gradient(90deg, rgba(3,18,8,.92), rgba(2,10,5,.78));
+  color: inherit;
+  text-decoration: none;
+  box-shadow:
+    inset 0 0 36px rgba(82,255,135,.025),
+    0 14px 36px rgba(0,0,0,.18);
+  transition:
+    border-color .18s ease,
+    transform .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
+}
+
+.process-library-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(82,255,135,.56);
+  background: linear-gradient(90deg, rgba(4,24,10,.96), rgba(2,12,6,.84));
+  box-shadow:
+    inset 0 0 42px rgba(82,255,135,.04),
+    0 16px 42px rgba(0,0,0,.24),
+    0 0 18px rgba(82,255,135,.05);
+}
+
+.process-library-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  color: #001905;
+  background: var(--green);
+  border: 1px solid rgba(82,255,135,.72);
+  box-shadow: 0 0 18px rgba(82,255,135,.16);
+  font: 900 26px/1 Consolas, "Cascadia Mono", monospace;
+}
+
+.process-library-copy {
+  min-width: 0;
+}
+
+.process-library-copy h3 {
+  margin-top: 4px;
+  color: #e7ffed;
+  font-size: 18px;
+  letter-spacing: .03em;
+}
+
+.process-library-copy > p:last-child {
+  margin-top: 6px;
+  color: #86aa90;
+  font: 13px/1.45 "Segoe UI", Arial, sans-serif;
+}
+
+.process-library-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .10em;
+  white-space: nowrap;
+}
+
+.process-library-action strong {
+  font-size: 20px;
+  font-weight: 400;
+  transition: transform .18s ease;
+}
+
+.process-library-card:hover .process-library-action strong {
+  transform: translateX(4px);
+}
+
 .dashboard {
   border-top: 1px solid var(--line);
   padding-top: 26px;
@@ -482,6 +568,15 @@ footer * {
   .hero { grid-template-columns: 1fr; padding-top: 34px; }
   .topbar, .section-title, footer { align-items: flex-start; flex-direction: column; }
   .node-state { align-self: stretch; }
+
+  .process-library-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .process-library-action {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
