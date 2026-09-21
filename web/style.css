@@ -95,39 +95,21 @@ body {
 }
 
 .brand-mark {
-  position: relative;
-  width: 54px;
-  height: 54px;
-  min-width: 54px;
-  overflow: hidden;
+  color: #001905;
   background: var(--green);
-  border: 1px solid rgba(82,255,135,.72);
-  box-shadow:
-    0 0 20px rgba(82,255,135,.18),
-    inset 0 0 12px rgba(0,0,0,.22);
+  font-size: 20px;
+  font-weight: 900;
+  padding: 8px 10px;
+  box-shadow: 0 0 20px rgba(82,255,135,.25);
   flex: 0 0 auto;
 }
 
-.brand-mark-mdl::before {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  background-image: url("/assets/maravilhas-do-lar.jpg");
-  background-repeat: no-repeat;
-  background-size: 150px 75px;
-  background-position: left center;
-  filter: grayscale(1) contrast(240%) brightness(.18);
-  mix-blend-mode: multiply;
-  opacity: .96;
-}
-
-.brand-mark-mdl::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(0,0,0,.16);
-  box-shadow: inset 0 0 11px rgba(0,0,0,.22);
-  pointer-events: none;
+.company-name {
+  margin-top: 3px !important;
+  color: var(--green-soft) !important;
+  font-size: 10px !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase;
 }
 
 h1, h2, h3, h4, p { margin: 0; }
