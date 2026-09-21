@@ -25,10 +25,7 @@
       <button class="side-panel-close" type="button" data-close-panel="leftArchivePanel" aria-label="Fechar menu de processos">×</button>
     </div>
     <div class="side-panel-body">
-      <div class="side-placeholder">
-        <strong>ACERVO OPERACIONAL</strong>
-        <p>Estrutura preparada para manuais agrupados por tema. As categorias e documentos serão cadastrados nas próximas etapas.</p>
-      </div>
+      <div id="processTree" class="process-tree" aria-live="polite"></div>
     </div>
   </aside>
 
@@ -177,6 +174,23 @@
       <span id="footerTime">--</span>
     </footer>
   </main>
+
+  <div id="pdfModal" class="pdf-modal" aria-hidden="true">
+    <div class="pdf-modal-backdrop" data-close-pdf-modal></div>
+    <section class="pdf-modal-window" role="dialog" aria-modal="true" aria-labelledby="pdfModalTitle">
+      <header class="pdf-modal-head">
+        <div>
+          <p class="eyebrow">DOCUMENT VIEWER</p>
+          <h2 id="pdfModalTitle">DOCUMENTO</h2>
+          <p id="pdfModalMeta"></p>
+        </div>
+        <button id="pdfModalClose" class="pdf-modal-close" type="button" aria-label="Fechar documento">×</button>
+      </header>
+      <div class="pdf-modal-body">
+        <iframe id="pdfFrame" title="Visualizador de documento PDF"></iframe>
+      </div>
+    </section>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/app.js"></script>
