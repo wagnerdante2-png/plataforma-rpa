@@ -33,6 +33,7 @@ Nesta primeira versao o catalogo esta vazio. Os robos existentes serao conectado
 - `robots.json` - catalogo declarativo.
 - `web/` - interface Matrix/hacker.
 - `downloads/` - arquivos operacionais locais entregues pela Central (ignorado pelo Git).
+- `apps/` - aplicações web locais acopladas pela Central (ignorado pelo Git).
 
 ## Seguranca
 
@@ -51,3 +52,9 @@ Para habilitar o card **Escala de Folgas**, coloque a versão corporativa aprova
 `downloads/Escala de Folgas.xlsm`
 
 O arquivo não faz parte do repositório Git. No empacotamento corporativo definitivo, ele poderá compor o pacote operacional ao lado da Central.
+
+### Aderência de Escala
+
+O terceiro card de recursos acopla a aplicação `aderencia-escala` no primeiro acesso.
+A cópia operacional fica em `apps/aderencia-escala/` e é servida pela própria Central em `/apps/aderencia-escala/`.
+A pasta `.github` e a pasta `tests` do repositório de origem não são copiadas para o pacote operacional.
