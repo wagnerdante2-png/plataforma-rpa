@@ -157,11 +157,38 @@ async function loadResources() {
       description.textContent = "Arquivo Excel com macros. Adicione Escala de Folgas.xlsm à pasta downloads.";
       action.textContent = "INDISPONÍVEL";
     }
+
+    const adherence = resources.adherence || {};
+    const adherenceCard = $("adherenceAppCard");
+    const adherenceDescription = $("adherenceAppDescription");
+    const adherenceAction = $("adherenceAppAction");
+
+    if (adherenceCard) {
+      adherenceCard.href = adherence.openUrl || "/apps/aderencia-escala/";
+      adherenceCard.classList.remove("resource-disabled");
+      adherenceCard.setAttribute("aria-disabled", "false");
+
+      if (adherence.installed) {
+        adherenceDescription.textContent = "Aplicação local acoplada • análise de ponto × escala.";
+        adherenceAction.textContent = "ABRIR";
+      } else {
+        adherenceDescription.textContent = "Cruza ponto × escala. Primeiro acesso fará o acoplamento local.";
+        adherenceAction.textContent = "ACOPLAR";
+      }
+    }
   } catch (error) {
     card.classList.add("resource-disabled");
     card.setAttribute("aria-disabled", "true");
     card.href = "#";
     $("scaleDownloadAction").textContent = "INDISPONÍVEL";
+
+    const adherenceCard = $("adherenceAppCard");
+    if (adherenceCard) {
+      adherenceCard.classList.add("resource-disabled");
+      adherenceCard.setAttribute("aria-disabled", "true");
+      adherenceCard.href = "#";
+      $("adherenceAppAction").textContent = "INDISPONÍVEL";
+    }
   }
 }
 
@@ -194,6 +221,10 @@ async function boot() {
     toast(error.message, true);
   }
 }
+
+window.addEventListener("focus", () => {
+  loadResources().catch(() => {});
+});
 
 function tick() {
   const now = new Date();
