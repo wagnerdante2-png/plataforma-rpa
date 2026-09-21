@@ -508,6 +508,202 @@ h1 {
   background: rgba(82,255,135,.52);
 }
 
+.process-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.process-node {
+  border: 1px solid rgba(82,255,135,.12);
+  background: rgba(2,10,5,.56);
+}
+
+.process-node + .process-node {
+  margin-top: 2px;
+}
+
+.process-toggle,
+.process-document {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #bceac7;
+  text-align: left;
+  cursor: pointer;
+  font-family: Consolas, "Cascadia Mono", monospace;
+}
+
+.process-toggle {
+  padding: 10px 10px;
+}
+
+.process-toggle:hover,
+.process-toggle:focus-visible,
+.process-document:hover,
+.process-document:focus-visible {
+  background: rgba(82,255,135,.07);
+  color: var(--green);
+  outline: none;
+}
+
+.process-toggle[aria-disabled="true"] {
+  cursor: default;
+  color: #617c68;
+}
+
+.process-toggle[aria-disabled="true"]:hover {
+  background: transparent;
+}
+
+.process-chevron {
+  color: var(--green-dim);
+  font-size: 12px;
+  transition: transform .16s ease;
+}
+
+.process-toggle[aria-expanded="true"] .process-chevron {
+  transform: rotate(90deg);
+  color: var(--green);
+}
+
+.process-label {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+
+.process-count {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.process-children {
+  display: none;
+  padding: 0 0 7px 12px;
+  margin-left: 9px;
+  border-left: 1px solid rgba(82,255,135,.16);
+}
+
+.process-node.open > .process-children {
+  display: block;
+}
+
+.process-children .process-node {
+  border-color: transparent;
+  background: transparent;
+}
+
+.process-children .process-toggle {
+  padding: 8px 8px;
+}
+
+.process-document {
+  padding: 8px 8px;
+  color: #90be9b;
+}
+
+.process-document .process-doc-icon {
+  color: var(--green);
+  font-size: 10px;
+}
+
+.process-empty {
+  padding: 8px 10px 9px 28px;
+  color: #536d59;
+  font: 10px/1.4 "Segoe UI", Arial, sans-serif;
+}
+
+.pdf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+}
+
+.pdf-modal.open {
+  display: block;
+}
+
+.pdf-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(2px);
+}
+
+.pdf-modal-window {
+  position: absolute;
+  inset: 4vh 4vw;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(82,255,135,.42);
+  border-left: 3px solid var(--green);
+  background: #020503;
+  box-shadow: 0 0 70px rgba(0,0,0,.72), 0 0 28px rgba(82,255,135,.07);
+}
+
+.pdf-modal-head {
+  min-height: 70px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(3,18,8,.98), rgba(2,9,5,.94));
+}
+
+.pdf-modal-head h2 {
+  margin-top: 4px;
+  color: #e7ffed;
+  font-size: 18px;
+}
+
+.pdf-modal-head > div > p:last-child {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.pdf-modal-close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(82,255,135,.3);
+  background: rgba(12,72,30,.16);
+  color: var(--green);
+  cursor: pointer;
+  font: 400 22px/1 Consolas, monospace;
+}
+
+.pdf-modal-close:hover,
+.pdf-modal-close:focus-visible {
+  background: var(--green);
+  color: #001905;
+  outline: none;
+}
+
+.pdf-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #0a0a0a;
+}
+
+.pdf-modal-body iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
 .dashboard {
   border-top: 1px solid var(--line);
   padding-top: 14px;
