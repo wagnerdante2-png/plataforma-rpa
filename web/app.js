@@ -192,7 +192,69 @@ async function loadResources() {
   }
 }
 
+function setSidePanel(panelId, open) {
+  const panel = $(panelId);
+  const backdrop = $("sidePanelBackdrop");
+  if (!panel || !backdrop) return;
+
+  document.querySelectorAll(".side-panel.open").forEach((item) => {
+    if (item !== panel) {
+      item.classList.remove("open");
+      item.setAttribute("aria-hidden", "true");
+    }
+  });
+
+  panel.classList.toggle("open", open);
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+
+  const handleId = panelId === "leftArchivePanel" ? "leftArchiveHandle" : "rightArchiveHandle";
+  const handle = $(handleId);
+  if (handle) handle.setAttribute("aria-expanded", open ? "true" : "false");
+
+  const anyOpen = Boolean(document.querySelector(".side-panel.open"));
+  backdrop.classList.toggle("show", anyOpen);
+  backdrop.setAttribute("aria-hidden", anyOpen ? "false" : "true");
+}
+
+function closeSidePanels() {
+  document.querySelectorAll(".side-panel.open").forEach((panel) => {
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+  });
+
+  ["leftArchiveHandle", "rightArchiveHandle"].forEach((id) => {
+    const handle = $(id);
+    if (handle) handle.setAttribute("aria-expanded", "false");
+  });
+
+  const backdrop = $("sidePanelBackdrop");
+  if (backdrop) {
+    backdrop.classList.remove("show");
+    backdrop.setAttribute("aria-hidden", "true");
+  }
+}
+
+function initSidePanels() {
+  const leftHandle = $("leftArchiveHandle");
+  const rightHandle = $("rightArchiveHandle");
+  const backdrop = $("sidePanelBackdrop");
+
+  if (leftHandle) leftHandle.addEventListener("click", () => setSidePanel("leftArchivePanel", true));
+  if (rightHandle) rightHandle.addEventListener("click", () => setSidePanel("rightArchivePanel", true));
+  if (backdrop) backdrop.addEventListener("click", closeSidePanels);
+
+  document.querySelectorAll("[data-close-panel]").forEach((button) => {
+    button.addEventListener("click", () => closeSidePanels());
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSidePanels();
+  });
+}
+
 async function boot() {
+  initSidePanels();
+
   const scaleCard = $("scaleDownloadCard");
   if (scaleCard) {
     scaleCard.addEventListener("click", (event) => {
