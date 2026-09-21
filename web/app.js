@@ -127,7 +127,55 @@ async function runRobot(robot) {
   }
 }
 
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return "";
+  if (value < 1024 * 1024) return Math.max(1, Math.round(value / 1024)) + " KB";
+  return (value / (1024 * 1024)).toFixed(1).replace(".", ",") + " MB";
+}
+
+async function loadResources() {
+  const card = $("scaleDownloadCard");
+  if (!card) return;
+
+  try {
+    const resources = await api("/api/resources");
+    const scale = resources.scale || {};
+    const description = $("scaleDownloadDescription");
+    const action = $("scaleDownloadAction");
+
+    if (scale.available) {
+      card.classList.remove("resource-disabled");
+      card.setAttribute("aria-disabled", "false");
+      card.href = scale.downloadUrl || "/download/escala-folgas";
+      description.textContent = "Arquivo Excel com macros" + (scale.sizeBytes ? " • " + formatBytes(scale.sizeBytes) : "") + ".";
+      action.textContent = "BAIXAR";
+    } else {
+      card.classList.add("resource-disabled");
+      card.setAttribute("aria-disabled", "true");
+      card.href = "#";
+      description.textContent = "Arquivo Excel com macros. Adicione Escala de Folgas.xlsm à pasta downloads.";
+      action.textContent = "INDISPONÍVEL";
+    }
+  } catch (error) {
+    card.classList.add("resource-disabled");
+    card.setAttribute("aria-disabled", "true");
+    card.href = "#";
+    $("scaleDownloadAction").textContent = "INDISPONÍVEL";
+  }
+}
+
 async function boot() {
+  const scaleCard = $("scaleDownloadCard");
+  if (scaleCard) {
+    scaleCard.addEventListener("click", (event) => {
+      if (scaleCard.classList.contains("resource-disabled")) {
+        event.preventDefault();
+        toast("Escala de Folgas.xlsm ainda não está no pacote local.", true);
+      }
+    });
+  }
+
   try {
     const health = await api("/api/health");
     $("nodeStatus").textContent = health.ok ? "NODE ONLINE" : "NODE DEGRADED";
@@ -137,6 +185,7 @@ async function boot() {
     $("subtitle").textContent = catalog.subtitle || "LOCAL AUTOMATION NODE // 127.0.0.1";
     state.robots = Array.isArray(catalog.robots) ? catalog.robots : [];
     renderRobots();
+    await loadResources();
 
     terminal("catálogo carregado: " + state.robots.length + " módulo(s).");
   } catch (error) {
