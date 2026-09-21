@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "etiqueta-promocional",
+      "label": "Etiqueta Promocional",
+      "children": [],
+      "documents": []
+    },
+    {
+      "id": "zanthus-pdv",
+      "label": "Zanthus - PDV",
+      "children": [],
+      "documents": []
+    },
+    {
+      "id": "escala-folgas",
+      "label": "Escala de Folgas",
+      "children": [],
+      "documents": []
+    },
+    {
+      "id": "identificacao-padrao",
+      "label": "Identificação Padrão",
+      "children": [],
+      "documents": []
+    },
+    {
+      "id": "workforce-operacional",
+      "label": "Workforce Operacional",
+      "children": [],
+      "documents": []
+    }
+  ]
+}
