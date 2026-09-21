@@ -835,6 +835,42 @@ function Send-ProjectArchiveFile {
     }
 }
 
+function Open-ProjectArchiveFile {
+    param([string]$RelativePath)
+
+    if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+        throw "Arquivo de projeto nao informado."
+    }
+
+    $relative = [Uri]::UnescapeDataString($RelativePath).TrimStart("/")
+    if ($relative.StartsWith("archive/projetos/", [StringComparison]::OrdinalIgnoreCase)) {
+        $relative = $relative.Substring("archive/projetos/".Length)
+    }
+
+    if ($relative.Contains("..")) {
+        throw "Caminho de arquivo invalido."
+    }
+
+    $filePath = Resolve-ProjectArchiveFile -RelativePath $relative
+    if ([string]::IsNullOrWhiteSpace($filePath) -or -not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
+        throw "Arquivo de projeto nao encontrado no acervo local."
+    }
+
+    $allowed = @(".pptx", ".ppt", ".docx", ".doc", ".xlsx", ".xls", ".html", ".htm")
+    $ext = [IO.Path]::GetExtension($filePath).ToLowerInvariant()
+    if ($allowed -notcontains $ext) {
+        throw ("Tipo de arquivo nao autorizado para abertura local: " + $ext)
+    }
+
+    Write-CentralLog ("Abrindo arquivo historico de projeto: " + $filePath)
+    Start-Process -FilePath $filePath | Out-Null
+
+    return [PSCustomObject]@{
+        ok = $true
+        file = $filePath
+    }
+}
+
 function Open-IdentificationStandard {
     try {
         Write-CentralLog ("Abrindo Identificacao Padrao: " + $IdentificationStandardUrl)
@@ -877,6 +913,19 @@ function Handle-Request {
     if ($Request.Method -eq "GET" -and $pathOnly -eq "/download/escala-folgas") {
         Write-CentralLog ("Download solicitado: " + $ScaleFilePath)
         Write-FileDownloadResponse -Stream $Stream -FilePath $ScaleFilePath -DownloadName "Escala_de_Folgas.xlsm"
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $pathOnly -eq "/api/projects/open-file") {
+        try {
+            $payload = $Request.Body | ConvertFrom-Json
+            $relativePath = [string]$payload.path
+            Write-JsonResponse -Stream $Stream -StatusCode 200 -Object (Open-ProjectArchiveFile -RelativePath $relativePath)
+        }
+        catch {
+            Write-CentralLog $_.Exception.Message "ERRO"
+            Write-JsonResponse -Stream $Stream -StatusCode 400 -Object @{ ok = $false; message = $_.Exception.Message }
+        }
         return
     }
 
