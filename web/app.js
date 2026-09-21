@@ -200,7 +200,10 @@ async function openWorkforceMvp() {
     const status = await api("/api/workforce");
 
     if (!status.installed || !status.localUrl) {
-      throw new Error("Snapshot local do Workforce ainda não foi incorporado ao pacote da Central.");
+      throw new Error(
+        status.message ||
+        "Demo offline do Workforce não localizada. Coloque workforce-demo-offline.zip na pasta Downloads ou ao lado da Central."
+      );
     }
 
     terminal("Workforce Operacional: abrindo snapshot local.");
