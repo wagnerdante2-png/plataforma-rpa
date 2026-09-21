@@ -300,6 +300,27 @@ function Get-WorkforceSearchRoots {
 function Find-WorkforceOfflineDemo {
     foreach ($base in @(Get-WorkforceSearchRoots)) {
         try {
+            $packagedIndex = Get-ChildItem -LiteralPath $base -File -Filter "index.html" -Recurse -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Directory.Name -ieq "workforce-operacional" -and
+                    $_.Directory.Parent -and
+                    $_.Directory.Parent.Name -ieq "apps" -and
+                    ([IO.Path]::GetFullPath($_.Directory.FullName) -ne [IO.Path]::GetFullPath($WorkforceAppDirectory))
+                } |
+                Select-Object -First 1
+
+            if ($packagedIndex) {
+                return [PSCustomObject]@{
+                    kind = "dist"
+                    path = $packagedIndex.Directory.FullName
+                    source = "packaged-app"
+                }
+            }
+        }
+        catch {}
+
+
+        try {
             $zip = Get-ChildItem -LiteralPath $base -File -Filter "workforce-demo-offline.zip" -Recurse -ErrorAction SilentlyContinue |
                 Select-Object -First 1
             if ($zip) {
@@ -374,7 +395,7 @@ function Ensure-WorkforceSnapshotInstalled {
 
     $artifact = Find-WorkforceOfflineDemo
     if (-not $artifact) {
-        Write-CentralLog "Demo offline do Workforce nao localizada. Procurado por workforce-demo-offline.zip / dist-offline / ABRIR-WORKFORCE-DEMO.cmd." "AVISO"
+        Write-CentralLog "Demo offline do Workforce nao localizada. Procurado por apps\workforce-operacional / workforce-demo-offline.zip / dist-offline / ABRIR-WORKFORCE-DEMO.cmd." "AVISO"
         return $false
     }
 
@@ -456,7 +477,7 @@ function Get-WorkforcePayload {
     }
 
     if (-not $installed -and [string]::IsNullOrWhiteSpace($message)) {
-        $message = "Demo offline do Workforce nao encontrada no PC."
+        $message = "Demo offline do Workforce nao encontrada no pacote local nem no PC."
     }
 
     return [PSCustomObject]@{
