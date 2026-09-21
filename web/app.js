@@ -19,10 +19,35 @@ function escapeHtml(value) {
 
 function terminal(message, kind = "ok") {
   const box = $("terminal");
+  if (!box) return;
+
+  const last = box.lastElementChild;
+  if (last && last.dataset.message === message && last.dataset.kind === kind) {
+    const count = Number(last.dataset.count || "1") + 1;
+    last.dataset.count = String(count);
+    const suffix = last.querySelector("[data-repeat-count]");
+    if (suffix) suffix.textContent = " ×" + count;
+    box.scrollTop = box.scrollHeight;
+    return;
+  }
+
   const p = document.createElement("p");
   const marker = kind === "error" ? "[ERR]" : kind === "wait" ? "[ ..]" : "[ OK ]";
-  p.innerHTML = '<span class="' + (kind === "error" ? "" : "ok") + '">' + marker + '</span> ' + escapeHtml(message);
+  p.dataset.message = message;
+  p.dataset.kind = kind;
+  p.dataset.count = "1";
+  p.innerHTML =
+    '<span class="' + (kind === "error" ? "" : "ok") + '">' + marker + '</span> ' +
+    escapeHtml(message) +
+    '<span data-repeat-count></span>';
+
   box.appendChild(p);
+
+  const maxLines = 80;
+  while (box.children.length > maxLines) {
+    box.removeChild(box.firstElementChild);
+  }
+
   box.scrollTop = box.scrollHeight;
 }
 
