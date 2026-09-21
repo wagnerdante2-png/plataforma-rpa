@@ -274,6 +274,145 @@ function Send-AppStaticFile {
     Write-HttpResponse -Stream $Stream -StatusCode 200 -Reason "OK" -Body ([IO.File]::ReadAllBytes($filePath)) -ContentType (Get-ContentType $filePath)
 }
 
+function Get-WorkforceSearchRoots {
+    $roots = New-Object System.Collections.Generic.List[string]
+
+    foreach ($candidate in @(
+        $Root,
+        (Split-Path -Parent $Root),
+        $(if (Split-Path -Parent $Root) { Split-Path -Parent (Split-Path -Parent $Root) } else { $null }),
+        $(if ($env:USERPROFILE) { Join-Path $env:USERPROFILE "Downloads" } else { $null }),
+        $(if ($env:USERPROFILE) { Join-Path $env:USERPROFILE "Desktop" } else { $null })
+    )) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+        try {
+            $full = [IO.Path]::GetFullPath($candidate)
+            if ((Test-Path -LiteralPath $full -PathType Container) -and -not $roots.Contains($full)) {
+                $roots.Add($full)
+            }
+        }
+        catch {}
+    }
+
+    return @($roots)
+}
+
+function Find-WorkforceOfflineDemo {
+    foreach ($base in @(Get-WorkforceSearchRoots)) {
+        try {
+            $zip = Get-ChildItem -LiteralPath $base -File -Filter "workforce-demo-offline.zip" -Recurse -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($zip) {
+                return [PSCustomObject]@{
+                    kind = "zip"
+                    path = $zip.FullName
+                }
+            }
+        }
+        catch {}
+
+        try {
+            $index = Get-ChildItem -LiteralPath $base -File -Filter "index.html" -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.Directory.Name -ieq "dist-offline" } |
+                Select-Object -First 1
+            if ($index) {
+                return [PSCustomObject]@{
+                    kind = "dist"
+                    path = $index.Directory.FullName
+                }
+            }
+        }
+        catch {}
+
+        try {
+            $launcher = Get-ChildItem -LiteralPath $base -File -Filter "ABRIR-WORKFORCE-DEMO.cmd" -Recurse -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($launcher) {
+                $nearbyDist = Join-Path $launcher.Directory.FullName "dist-offline"
+                if (Test-Path -LiteralPath (Join-Path $nearbyDist "index.html") -PathType Leaf) {
+                    return [PSCustomObject]@{
+                        kind = "dist"
+                        path = $nearbyDist
+                    }
+                }
+            }
+        }
+        catch {}
+    }
+
+    return $null
+}
+
+function Copy-WorkforceDist {
+    param([string]$SourceDirectory)
+
+    $sourceIndex = Join-Path $SourceDirectory "index.html"
+    if (-not (Test-Path -LiteralPath $sourceIndex -PathType Leaf)) {
+        throw "dist-offline do Workforce nao possui index.html."
+    }
+
+    if (Test-Path -LiteralPath $WorkforceAppDirectory) {
+        Remove-Item -LiteralPath $WorkforceAppDirectory -Recurse -Force
+    }
+
+    Ensure-Directory $WorkforceAppDirectory
+    Get-ChildItem -LiteralPath $SourceDirectory -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $WorkforceAppDirectory -Recurse -Force
+    }
+
+    if (-not (Test-Path -LiteralPath $WorkforceIndexPath -PathType Leaf)) {
+        throw "Falha ao incorporar snapshot local do Workforce."
+    }
+
+    Write-CentralLog ("Snapshot local do Workforce incorporado a partir de: " + $SourceDirectory)
+}
+
+function Ensure-WorkforceSnapshotInstalled {
+    if (Test-Path -LiteralPath $WorkforceIndexPath -PathType Leaf) {
+        return $true
+    }
+
+    $artifact = Find-WorkforceOfflineDemo
+    if (-not $artifact) {
+        Write-CentralLog "Demo offline do Workforce nao localizada. Procurado por workforce-demo-offline.zip / dist-offline / ABRIR-WORKFORCE-DEMO.cmd." "AVISO"
+        return $false
+    }
+
+    if ([string]$artifact.kind -eq "dist") {
+        Copy-WorkforceDist -SourceDirectory ([string]$artifact.path)
+        return $true
+    }
+
+    if ([string]$artifact.kind -eq "zip") {
+        $token = [Guid]::NewGuid().ToString("N")
+        $tempDir = Join-Path $RuntimeDirectory ("workforce_import_" + $token)
+        Ensure-Directory $tempDir
+
+        try {
+            Write-CentralLog ("Importando demo offline do Workforce: " + [string]$artifact.path)
+            Expand-Archive -LiteralPath ([string]$artifact.path) -DestinationPath $tempDir -Force
+
+            $index = Get-ChildItem -LiteralPath $tempDir -File -Filter "index.html" -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.Directory.Name -ieq "dist-offline" } |
+                Select-Object -First 1
+
+            if (-not $index) {
+                throw "O ZIP workforce-demo-offline.zip nao contem dist-offline\index.html."
+            }
+
+            Copy-WorkforceDist -SourceDirectory $index.Directory.FullName
+            return $true
+        }
+        finally {
+            if (Test-Path -LiteralPath $tempDir) {
+                try { Remove-Item -LiteralPath $tempDir -Recurse -Force } catch {}
+            }
+        }
+    }
+
+    return $false
+}
+
 function Send-WorkforceStaticFile {
     param(
         [System.IO.Stream]$Stream,
@@ -303,12 +442,31 @@ function Send-WorkforceStaticFile {
 
 function Get-WorkforcePayload {
     $installed = Test-Path -LiteralPath $WorkforceIndexPath -PathType Leaf
+    $message = ""
+
+    if (-not $installed) {
+        try {
+            $installed = [bool](Ensure-WorkforceSnapshotInstalled)
+        }
+        catch {
+            $message = $_.Exception.Message
+            Write-CentralLog ("Falha ao importar demo offline do Workforce: " + $message) "ERRO"
+            $installed = $false
+        }
+    }
+
+    if (-not $installed -and [string]::IsNullOrWhiteSpace($message)) {
+        $message = "Demo offline do Workforce nao encontrada no PC."
+    }
+
     return [PSCustomObject]@{
         id = "workforce-operacional"
         installed = $installed
         localUrl = "/apps/workforce-operacional/"
-        sourceRef = "checkpoint/dprh-certified-stable-20260813"
-        sourceCommit = "3dfac9d61252b149643cbde23a15ae2067b91357"
+        message = $message
+        sourceArtifact = "workforce-demo-offline.zip"
+        sourceLauncher = "ABRIR-WORKFORCE-DEMO.cmd"
+        sourceBranch = "feature/historical-competence-navigation-20260813"
     }
 }
 
