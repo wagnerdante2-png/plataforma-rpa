@@ -166,7 +166,7 @@ function drawMatrix() {
     const y = drops[i] * fontSize;
     ctx.fillText(char, i * fontSize, y);
     if (y > innerHeight && Math.random() > .975) drops[i] = Math.random() * -20;
-    drops[i] += .72 + Math.random() * .22;
+    drops[i] += .34 + Math.random() * .10;
   }
 
   requestAnimationFrame(drawMatrix);
