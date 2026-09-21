@@ -63,20 +63,32 @@ function renderRobots() {
     const available = Boolean(robot.enabled && robot.available);
     const busy = state.busy.has(robot.id);
 
+    const installed = Boolean(robot.installed);
+    const stateLabel = installed
+      ? "ACOPLADO LOCALMENTE"
+      : robot.installable
+        ? "PRONTO PARA ACOPLAR"
+        : "NÃO DISPONÍVEL";
+
     card.innerHTML = `
       <div class="robot-top">
-        <span class="robot-code">:: ${escapeHtml(robot.id).toUpperCase()}</span>
+        <div class="robot-identity">
+          <div class="robot-icon" aria-hidden="true">${escapeHtml(robot.symbol || ">_")}</div>
+          <div>
+            <span class="robot-code">:: ${escapeHtml(robot.id).toUpperCase()}</span>
+            <h4>${escapeHtml(robot.name)}</h4>
+          </div>
+        </div>
         <span class="robot-badge">${escapeHtml(robot.category || "AUTOMACAO")}</span>
       </div>
-      <h4>${escapeHtml(robot.name)}</h4>
       <p>${escapeHtml(robot.description || "Automação local.")}</p>
       <div class="robot-footer">
         <div class="availability ${available ? "" : "offline"}">
           <i></i>
-          <span>${available ? "EXECUTÁVEL LOCALIZADO" : "NÃO CONECTADO"}</span>
+          <span>${stateLabel}</span>
         </div>
         <button class="run-btn" ${available && !busy ? "" : "disabled"}>
-          ${busy ? "INICIANDO..." : "EXECUTAR"}
+          ${busy ? (installed ? "INICIANDO..." : "ACOPLANDO...") : "EXECUTAR"}
         </button>
       </div>
     `;
@@ -101,6 +113,11 @@ async function runRobot(robot) {
 
     terminal((result.name || robot.name) + " iniciado em janela local.");
     toast(robot.name + " iniciado.");
+
+    try {
+      const catalog = await api("/api/robots");
+      state.robots = Array.isArray(catalog.robots) ? catalog.robots : state.robots;
+    } catch (_) {}
   } catch (error) {
     terminal(error.message, "error");
     toast(error.message, true);
