@@ -239,11 +239,26 @@ async function openWorkforceMvp() {
   }
 }
 
+async function openIdentificationStandard() {
+  try {
+    await api("/api/projects/identificacao-padrao/open", { method: "POST", body: "{}" });
+    terminal("Identificação Padrão: abrindo arquivo corporativo no navegador.");
+  } catch (error) {
+    toast(error.message || "Não foi possível abrir Identificação Padrão.", true);
+    terminal("erro ao abrir Identificação Padrão: " + (error.message || error), "error");
+  }
+}
+
 function runProjectAction(action) {
   if (!action || !action.type) return;
 
   if (action.type === "workforce-mvp") {
     openWorkforceMvp();
+    return;
+  }
+
+  if (action.type === "identificacao-padrao") {
+    openIdentificationStandard();
     return;
   }
 
