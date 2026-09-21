@@ -2,7 +2,8 @@ const $ = (id) => document.getElementById(id);
 
 const state = {
   robots: [],
-  busy: new Set()
+  busy: new Set(),
+  processCatalog: []
 };
 
 function escapeHtml(value) {
@@ -192,6 +193,136 @@ async function loadResources() {
   }
 }
 
+async function loadProcessCatalog() {
+  try {
+    const response = await fetch("/processes.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("Catálogo de processos indisponível.");
+    const data = await response.json();
+    state.processCatalog = Array.isArray(data.classifications) ? data.classifications : [];
+    renderProcessTree();
+  } catch (error) {
+    const root = $("processTree");
+    if (root) {
+      root.innerHTML = '<div class="side-placeholder"><strong>CATÁLOGO INDISPONÍVEL</strong><p>' + escapeHtml(error.message) + '</p></div>';
+    }
+  }
+}
+
+function countProcessItems(node) {
+  let total = Array.isArray(node.documents) ? node.documents.length : 0;
+  for (const child of Array.isArray(node.children) ? node.children : []) {
+    total += countProcessItems(child);
+  }
+  return total;
+}
+
+function createProcessNode(node, depth = 0) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "process-node";
+  wrapper.dataset.depth = String(depth);
+
+  const children = Array.isArray(node.children) ? node.children : [];
+  const documents = Array.isArray(node.documents) ? node.documents : [];
+  const hasNested = children.length > 0 || documents.length > 0;
+  const total = countProcessItems(node);
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "process-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+  if (!hasNested) toggle.setAttribute("aria-disabled", "true");
+
+  toggle.innerHTML =
+    '<span class="process-chevron">' + (hasNested ? "›" : "·") + '</span>' +
+    '<span class="process-label">' + escapeHtml(node.label || node.name || "SEM NOME") + '</span>' +
+    '<span class="process-count">' + (total ? total + " doc" + (total === 1 ? "" : "s") : "") + '</span>';
+
+  wrapper.appendChild(toggle);
+
+  if (hasNested) {
+    const nested = document.createElement("div");
+    nested.className = "process-children";
+
+    for (const child of children) {
+      nested.appendChild(createProcessNode(child, depth + 1));
+    }
+
+    for (const doc of documents) {
+      const docButton = document.createElement("button");
+      docButton.type = "button";
+      docButton.className = "process-document";
+      docButton.innerHTML =
+        '<span class="process-doc-icon">PDF</span>' +
+        '<span class="process-label">' + escapeHtml(doc.title || "Documento") + '</span>' +
+        '<span class="process-count">' + escapeHtml(doc.version || "") + '</span>';
+      docButton.addEventListener("click", () => openPdfDocument(doc, node));
+      nested.appendChild(docButton);
+    }
+
+    wrapper.appendChild(nested);
+
+    toggle.addEventListener("click", () => {
+      const isOpen = wrapper.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+  }
+
+  return wrapper;
+}
+
+function renderProcessTree() {
+  const root = $("processTree");
+  if (!root) return;
+  root.innerHTML = "";
+
+  if (!state.processCatalog.length) {
+    root.innerHTML = '<div class="side-placeholder"><strong>SEM CLASSIFICAÇÕES</strong><p>Nenhum grupo documental foi cadastrado.</p></div>';
+    return;
+  }
+
+  for (const classification of state.processCatalog) {
+    root.appendChild(createProcessNode(classification, 0));
+  }
+}
+
+function openPdfDocument(doc, parentNode) {
+  if (!doc || !doc.file) return;
+
+  const modal = $("pdfModal");
+  const frame = $("pdfFrame");
+  const title = $("pdfModalTitle");
+  const meta = $("pdfModalMeta");
+  if (!modal || !frame || !title || !meta) return;
+
+  title.textContent = doc.title || "Documento";
+  const metaParts = [];
+  if (parentNode && (parentNode.label || parentNode.name)) metaParts.push(parentNode.label || parentNode.name);
+  if (doc.version) metaParts.push(doc.version);
+  if (doc.date) metaParts.push(doc.date);
+  meta.textContent = metaParts.join(" // ");
+  frame.src = doc.file;
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closePdfDocument() {
+  const modal = $("pdfModal");
+  const frame = $("pdfFrame");
+  if (!modal || !frame) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+  frame.src = "about:blank";
+}
+
+function initPdfModal() {
+  const closeButton = $("pdfModalClose");
+  if (closeButton) closeButton.addEventListener("click", closePdfDocument);
+
+  document.querySelectorAll("[data-close-pdf-modal]").forEach((el) => {
+    el.addEventListener("click", closePdfDocument);
+  });
+}
+
 function setSidePanel(panelId, open) {
   const panel = $(panelId);
   const backdrop = $("sidePanelBackdrop");
@@ -248,12 +379,17 @@ function initSidePanels() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeSidePanels();
+    if (event.key === "Escape") {
+      closePdfDocument();
+      closeSidePanels();
+    }
   });
 }
 
 async function boot() {
   initSidePanels();
+  initPdfModal();
+  loadProcessCatalog().catch(() => {});
 
   const scaleCard = $("scaleDownloadCard");
   if (scaleCard) {
