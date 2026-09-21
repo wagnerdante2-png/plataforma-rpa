@@ -171,7 +171,57 @@
         {
           "id": "financeiro",
           "label": "Financeiro",
-          "children": []
+          "children": [
+            {
+              "id": "controladoria",
+              "label": "Controladoria",
+              "children": [
+                {
+                  "id": "fiscal",
+                  "label": "Fiscal",
+                  "documents": [
+                    {
+                      "title": "LANÇAMENTO CGO 549",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 549.pdf"
+                    },
+                    {
+                      "title": "LANÇAMENTO CGO 550",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 550.pdf"
+                    },
+                    {
+                      "title": "LANÇAMENTO CGO 801",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 801.pdf"
+                    },
+                    {
+                      "title": "LANÇAMENTO CGO 840",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 840.pdf"
+                    },
+                    {
+                      "title": "LANÇAMENTO CGO 850",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 850.pdf"
+                    },
+                    {
+                      "title": "LANÇAMENTO CGO 861",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 861.pdf"
+                    },
+                    {
+                      "title": "LANÇAMENTO CGO 870",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/LANÇAMENTO CGO 870.pdf"
+                    },
+                    {
+                      "title": "Venda Faturada - CGO 810",
+                      "file": "/archive/processos/administrativos/financeiro/controladoria/fiscal/Venda Faturada - CGO 810.pdf"
+                    }
+                  ]
+                },
+                {
+                  "id": "contabilidade",
+                  "label": "Contabilidade",
+                  "documents": []
+                }
+              ]
+            }
+          ]
         },
         {
           "id": "operacoes-adm",
