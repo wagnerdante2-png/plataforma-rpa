@@ -4,8 +4,8 @@
   "robots": [
     {
       "id": "robo-precos",
-      "name": "Auditoria de Preços",
-      "description": "Coleta os totalizadores do PDA e preenche a planilha Controle de Auditoria de Preços.",
+      "name": "Auditoria de Preços + Descontos",
+      "description": "Coleta a Auditoria de Preços no PDA, consulta PREÇO ERRADO no Power BI e preenche a planilha de controle.",
       "category": "AUDITORIA",
       "symbol": "R$",
       "enabled": true,
