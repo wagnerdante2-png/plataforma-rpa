@@ -7,3 +7,5 @@ runtime/
 *.log
 .DS_Store
 Thumbs.db
+Controle de Auditoria de Pre*.xlsx
+RoboPrecos_Backups/
