@@ -251,6 +251,7 @@ function Get-RoboPrecosBiPageState {
   const microsoft = host.includes('login.microsoftonline.com') || host.includes('login.live.com');
   const powerbi = host.includes('app.powerbi.com');
   const singleSignOn = powerbi && path.includes('/singlesignon');
+  const rootLanding = powerbi && (path === '/' || path === '');
 
   let kind = 'OTHER';
 
@@ -289,7 +290,7 @@ function Get-RoboPrecosBiPageState {
   )) {
     kind = 'MICROSOFT_EMAIL';
   }
-  else if (powerbi && !singleSignOn) {
+  else if (powerbi && !singleSignOn && !rootLanding) {
     kind = 'AUTHENTICATED';
   }
 
@@ -309,6 +310,38 @@ function Get-RoboPrecosBiPageState {
 '@
 
     return Invoke-CdpJsonExpression -Socket $Socket -Expression $expression
+}
+
+
+function Test-RoboPrecosBiStableAuthenticated {
+    param(
+        [System.Net.WebSockets.ClientWebSocket]$Socket,
+        $State,
+        [int]$StableMilliseconds = 3500
+    )
+
+    if (-not $State -or [string]$State.kind -ne "AUTHENTICATED") {
+        return $false
+    }
+
+    $deadline = (Get-Date).AddMilliseconds($StableMilliseconds)
+
+    do {
+        Start-Sleep -Milliseconds 350
+
+        try {
+            $probe = Get-RoboPrecosBiPageState -Socket $Socket
+        }
+        catch {
+            return $false
+        }
+
+        if (-not $probe -or [string]$probe.kind -ne "AUTHENTICATED") {
+            return $false
+        }
+    } while ((Get-Date) -lt $deadline)
+
+    return $true
 }
 
 function Get-RoboPrecosBiFlatDomNodes {
@@ -795,8 +828,15 @@ function Invoke-RoboPrecosBiLogin {
         }
 
         if ($kind -eq "AUTHENTICATED") {
-            Write-RoboLog ("Sessao Power BI autenticada de fato. URL: " + [string]$state.href)
-            return
+            if (Test-RoboPrecosBiStableAuthenticated -Socket $Socket -State $state -StableMilliseconds 2500) {
+                $confirmedState = Get-RoboPrecosBiPageState -Socket $Socket
+                Write-RoboLog ("Sessao Power BI autenticada de fato. URL: " + [string]$confirmedState.href)
+                return
+            }
+
+            Write-RoboLog "Estado AUTHENTICATED transitorio detectado; aguardando redirect real antes de prosseguir." "AVISO"
+            Start-Sleep -Milliseconds 350
+            continue
         }
 
         if ($kind -in @("POWERBI_EMAIL","MICROSOFT_EMAIL","MICROSOFT_PASSWORD","MICROSOFT_STAY")) {
@@ -822,8 +862,15 @@ function Invoke-RoboPrecosBiLogin {
                     )
 
                     if ($transitionKind -eq "AUTHENTICATED") {
-                        Write-RoboLog ("Sessao Power BI autenticada de fato. URL: " + [string]$transition.href)
-                        return
+                        if (Test-RoboPrecosBiStableAuthenticated -Socket $Socket -State $transition -StableMilliseconds 2500) {
+                            $confirmedTransition = Get-RoboPrecosBiPageState -Socket $Socket
+                            Write-RoboLog ("Sessao Power BI autenticada de fato. URL: " + [string]$confirmedTransition.href)
+                            return
+                        }
+
+                        Write-RoboLog "AUTHENTICATED transitorio apos submissao; aguardando o redirect real sem repetir o clique." "AVISO"
+                        $lastKind = ""
+                        continue
                     }
 
                     if ($transitionKind -ne $kind) {
@@ -999,8 +1046,40 @@ function Wait-RoboPrecosBiTargetReport {
             $lastState = $null
         }
 
-        if ($lastState -and (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$lastState.href) -TargetUrl $TargetUrl)) {
-            return $lastState
+        if (
+            $lastState -and
+            [string]$lastState.kind -eq "AUTHENTICATED" -and
+            (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$lastState.href) -TargetUrl $TargetUrl)
+        ) {
+            $stableDeadline = (Get-Date).AddMilliseconds(3000)
+            $stable = $true
+
+            do {
+                Start-Sleep -Milliseconds 350
+
+                try {
+                    $probe = Get-RoboPrecosBiPageState -Socket $Socket
+                }
+                catch {
+                    $probe = $null
+                }
+
+                if (
+                    -not $probe -or
+                    [string]$probe.kind -ne "AUTHENTICATED" -or
+                    -not (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$probe.href) -TargetUrl $TargetUrl)
+                ) {
+                    $lastState = $probe
+                    $stable = $false
+                    break
+                }
+
+                $lastState = $probe
+            } while ((Get-Date) -lt $stableDeadline)
+
+            if ($stable) {
+                return $lastState
+            }
         }
 
         Start-Sleep -Milliseconds 400
@@ -1019,7 +1098,11 @@ function Navigate-RoboPrecosBiReport {
     # Depois do login o Power BI pode estar completando um redirect proprio.
     # Primeiro damos uma janela curta para esse redirect terminar sozinho.
     $autoState = Wait-RoboPrecosBiTargetReport -Socket $Socket -TargetUrl $Url -TimeoutSeconds 4
-    if ($autoState -and (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$autoState.href) -TargetUrl $Url)) {
+    if (
+        $autoState -and
+        [string]$autoState.kind -eq "AUTHENTICATED" -and
+        (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$autoState.href) -TargetUrl $Url)
+    ) {
         Write-RoboLog ("Power BI chegou automaticamente ao relatorio: " + [string]$autoState.href)
         return $autoState
     }
@@ -1056,7 +1139,11 @@ function Navigate-RoboPrecosBiReport {
     }
 
     $state = Wait-RoboPrecosBiTargetReport -Socket $Socket -TargetUrl $Url -TimeoutSeconds ([Math]::Min($TimeoutSeconds, 25))
-    if ($state -and (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$state.href) -TargetUrl $Url)) {
+    if (
+        $state -and
+        [string]$state.kind -eq "AUTHENTICATED" -and
+        (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$state.href) -TargetUrl $Url)
+    ) {
         return $state
     }
 
@@ -1069,7 +1156,11 @@ function Navigate-RoboPrecosBiReport {
     catch {}
 
     $state = Wait-RoboPrecosBiTargetReport -Socket $Socket -TargetUrl $Url -TimeoutSeconds ([Math]::Min($TimeoutSeconds, 30))
-    if ($state -and (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$state.href) -TargetUrl $Url)) {
+    if (
+        $state -and
+        [string]$state.kind -eq "AUTHENTICATED" -and
+        (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$state.href) -TargetUrl $Url)
+    ) {
         return $state
     }
 
@@ -1088,9 +1179,14 @@ function Open-RoboPrecosBiPage {
     $bi = Get-RoboPrecosBiConfig -Config $Config
     $credential = Get-RoboPrecosBiCredential -Config $Config
 
-    # LOGIN CONGELADO: mesma maquina de estados que ja funcionou na v0.4.5.
+    # LOGIN CONGELADO: mesma maquina de estados validada anteriormente.
+    # A unica protecao adicionada aqui e contra o falso AUTHENTICATED transitorio
+    # enquanto app.powerbi.com ainda esta redirecionando uma sessao nao autenticada.
     $state = Get-RoboPrecosBiPageState -Socket $Socket
-    if (-not $state -or [string]$state.kind -ne "AUTHENTICATED") {
+    $sessionConfirmed = Test-RoboPrecosBiStableAuthenticated -Socket $Socket -State $state -StableMilliseconds 5000
+
+    if (-not $sessionConfirmed) {
+        $state = Get-RoboPrecosBiPageState -Socket $Socket
         $loginUrl = [string]$bi.loginUrl
         if ([string]::IsNullOrWhiteSpace($loginUrl)) {
             $loginUrl = "https://app.powerbi.com/"
@@ -1107,7 +1203,11 @@ function Open-RoboPrecosBiPage {
     Write-RoboLog ("Autenticacao Power BI concluida. Abrindo relatorio autorizado: " + $Url)
     $reportState = Navigate-RoboPrecosBiReport -Socket $Socket -Url $Url -TimeoutSeconds ([int]$bi.pageLoadTimeoutSeconds)
 
-    if (-not $reportState -or -not (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$reportState.href) -TargetUrl $Url)) {
+    if (
+        -not $reportState -or
+        [string]$reportState.kind -ne "AUTHENTICATED" -or
+        -not (Test-RoboPrecosBiTargetReportUrl -CurrentUrl ([string]$reportState.href) -TargetUrl $Url)
+    ) {
         $lastUrl = if ($reportState) { [string]$reportState.href } else { "" }
         throw ("Power BI nao chegou ao relatorio apos autenticacao. URL atual: " + $lastUrl)
     }
@@ -1127,42 +1227,315 @@ function Clear-RoboPrecosBiEmpresaSlicer {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
   const visible = e => !!(e && (e.offsetWidth || e.offsetHeight || e.getClientRects().length));
+  const getText = e => norm((e && (e.innerText || e.textContent)) || '');
+
   const labels = [...document.querySelectorAll('*')].filter(e =>
-    visible(e) && norm(e.innerText || e.textContent) === 'empresa'
+    visible(e) && getText(e) === 'empresa'
   );
 
-  for (const label of labels) {
+  if (!labels.length) return 'NOT_FOUND';
+
+  const findSlicer = label => {
+    const candidates = [];
     let node = label;
-    for (let level=0; level<8 && node; level++, node=node.parentElement) {
-      const clear = [...node.querySelectorAll('button,[role="button"]')].find(b => {
-        const t = norm((b.getAttribute('aria-label') || '') + ' ' + (b.getAttribute('title') || '') + ' ' + (b.innerText || ''));
-        return t.includes('limpar') || t.includes('clear selection') || t.includes('clear filter');
-      });
-      if (clear && visible(clear)) {
-        clear.click();
+
+    for (let level=0; level<12 && node; level++, node=node.parentElement) {
+      const r = node.getBoundingClientRect();
+      const text = getText(node);
+
+      if (r.width < 180 || r.height < 35) continue;
+
+      let score = 0;
+      if (text.includes('selecoes multiplas')) score += 100;
+      if (text.includes('todos') || text.includes('all')) score += 80;
+      if (node.querySelector('[role="combobox"]')) score += 70;
+      if (node.querySelector('[role="listbox"]')) score += 40;
+      if (r.height < 450) score += 25;
+      if (r.width > 300) score += 10;
+      score -= Math.min(40, Math.round((r.width * r.height) / 100000));
+
+      if (score > 0) candidates.push({node, score, area:r.width*r.height});
+    }
+
+    candidates.sort((a,b) => (b.score-a.score) || (a.area-b.area));
+    return candidates.length ? candidates[0].node : null;
+  };
+
+  const getSummary = slicer => {
+    const wanted = [...slicer.querySelectorAll('*')].filter(visible).map(e => ({
+      el:e,
+      text:getText(e),
+      rect:e.getBoundingClientRect()
+    })).filter(x =>
+      x.text === 'selecoes multiplas' ||
+      x.text === 'todos' ||
+      x.text === 'all'
+    ).sort((a,b) => (a.rect.width*a.rect.height)-(b.rect.width*b.rect.height));
+
+    return wanted.length ? wanted[0] : null;
+  };
+
+  const stateIsAll = slicer => {
+    const summary = getSummary(slicer);
+    return !!(summary && (summary.text === 'todos' || summary.text === 'all'));
+  };
+
+  const tryAccessibleClear = async slicer => {
+    const clickables = [...slicer.querySelectorAll('button,[role="button"],[tabindex],a')].filter(visible);
+
+    for (const el of clickables) {
+      const descriptor = norm(
+        (el.getAttribute('aria-label') || '') + ' ' +
+        (el.getAttribute('title') || '') + ' ' +
+        (el.getAttribute('data-tooltip') || '') + ' ' +
+        (el.innerText || '')
+      );
+
+      if (
+        descriptor.includes('limpar sele') ||
+        descriptor.includes('limpar filtro') ||
+        descriptor.includes('clear selection') ||
+        descriptor.includes('clear filter')
+      ) {
+        el.click();
         await sleep(1200);
-        return 'CLEARED_BUTTON';
-      }
-
-      const combo = node.querySelector('[role="combobox"]');
-      if (combo && visible(combo)) {
-        const current = norm(combo.innerText || combo.textContent);
-        if (current === 'todos' || current === 'all') return 'ALREADY_ALL';
-
-        combo.click();
-        await sleep(500);
-        const options = [...document.querySelectorAll('[role="option"],[role="menuitem"],[role="listbox"] *')].filter(visible);
-        const all = options.find(o => {
-          const t = norm(o.innerText || o.textContent);
-          return t === 'todos' || t === 'all' || t === 'selecionar tudo' || t === 'select all';
-        });
-        if (all) {
-          all.click();
-          await sleep(1200);
-          return 'CLEARED_OPTION';
-        }
+        return true;
       }
     }
+
+    return false;
+  };
+
+  const tryHeaderEraser = async (slicer,label) => {
+    const sr = slicer.getBoundingClientRect();
+    const lr = label.getBoundingClientRect();
+
+    const all = [...slicer.querySelectorAll('button,[role="button"],[tabindex],svg,path,g,div,span')]
+      .filter(visible)
+      .map(el => ({el, r:el.getBoundingClientRect()}))
+      .filter(x => {
+        const r=x.r;
+        if (r.width < 6 || r.height < 6 || r.width > 60 || r.height > 60) return false;
+        const nearRight = r.right >= sr.right - 55 && r.right <= sr.right + 8;
+        const headerBand = r.top >= lr.top - 15 && r.bottom <= lr.bottom + 28;
+        return nearRight && headerBand;
+      })
+      .sort((a,b) => {
+        const da=Math.abs(sr.right-a.r.right)+Math.abs(lr.top-a.r.top);
+        const db=Math.abs(sr.right-b.r.right)+Math.abs(lr.top-b.r.top);
+        return da-db;
+      });
+
+    for (const item of all) {
+      let target=item.el;
+      for (let i=0;i<4 && target && target.parentElement;i++) {
+        const role=(target.getAttribute && target.getAttribute('role')) || '';
+        const tab=(target.getAttribute && target.getAttribute('tabindex'));
+        if (target.tagName === 'BUTTON' || role === 'button' || tab !== null) break;
+        target=target.parentElement;
+      }
+
+      try {
+        target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,clientX:item.r.left+item.r.width/2,clientY:item.r.top+item.r.height/2}));
+        target.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,clientX:item.r.left+item.r.width/2,clientY:item.r.top+item.r.height/2}));
+        target.click();
+        await sleep(1200);
+
+        if (stateIsAll(slicer)) return true;
+      } catch {}
+    }
+
+    return false;
+  };
+
+  const parseSelected = el => {
+    const ariaSelected=(el.getAttribute('aria-selected') || '').toLowerCase();
+    const ariaChecked=(el.getAttribute('aria-checked') || '').toLowerCase();
+    const checkbox=el.querySelector('input[type="checkbox"]');
+
+    if (ariaSelected === 'true' || ariaChecked === 'true') return true;
+    if (ariaSelected === 'false' || ariaChecked === 'false') return false;
+    if (checkbox) return !!checkbox.checked;
+
+    // Power BI frequentemente representa o item por elemento pai/filho.
+    for (let i=0,node=el; i<3 && node; i++,node=node.parentElement) {
+      const as=(node.getAttribute && node.getAttribute('aria-selected') || '').toLowerCase();
+      const ac=(node.getAttribute && node.getAttribute('aria-checked') || '').toLowerCase();
+      const cb=node.querySelector && node.querySelector('input[type="checkbox"]');
+      if (as === 'true' || ac === 'true') return true;
+      if (as === 'false' || ac === 'false') return false;
+      if (cb) return !!cb.checked;
+    }
+
+    return null;
+  };
+
+  const getCompanyOptions = () => {
+    const roleNodes=[...document.querySelectorAll(
+      '[role="option"],[role="menuitemcheckbox"],[role="checkbox"],[aria-selected],[aria-checked]'
+    )].filter(visible);
+
+    const out=[];
+    const seen=new Set();
+
+    for (const el of roleNodes) {
+      const raw=(el.innerText || el.textContent || '').replace(/\s+/g,' ').trim();
+      const m=raw.match(/\bML\s*0*(\d{1,4})\b/i);
+      if (!m) continue;
+
+      const id=String(parseInt(m[1],10));
+      const key=id+'@'+Math.round(el.getBoundingClientRect().top);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({el,id,selected:parseSelected(el)});
+    }
+
+    return out;
+  };
+
+  const findListScroller = companyOptions => {
+    const candidates=[];
+
+    for (const option of companyOptions) {
+      let node=option.el;
+      for (let i=0;i<10 && node;i++,node=node.parentElement) {
+        try {
+          const r=node.getBoundingClientRect();
+          const style=getComputedStyle(node);
+          const max=Math.max(0,(node.scrollHeight||0)-(node.clientHeight||0));
+
+          if (
+            visible(node) &&
+            max > 20 &&
+            r.height > 80 &&
+            r.width > 180 &&
+            (style.overflowY === 'auto' || style.overflowY === 'scroll' || max > r.height*0.25)
+          ) {
+            const area=r.width*r.height;
+            const score=max + (style.overflowY === 'auto' || style.overflowY === 'scroll' ? 500 : 0) - Math.min(300,area/5000);
+            candidates.push({el:node,score,area});
+          }
+        } catch {}
+      }
+    }
+
+    candidates.sort((a,b)=>(b.score-a.score)||(a.area-b.area));
+    return candidates.length ? candidates[0].el : null;
+  };
+
+  const inspectEntireMultiSelection = async slicer => {
+    const summary = getSummary(slicer);
+    if (!summary || summary.text !== 'selecoes multiplas') return 'NO_MULTI';
+
+    summary.el.click();
+    await sleep(700);
+
+    let options=getCompanyOptions();
+    if (!options.length) {
+      try { summary.el.click(); } catch {}
+      return 'NO_OPTIONS';
+    }
+
+    const scroller=findListScroller(options);
+    if (!scroller) {
+      // Sem scrollbar interna: se todas as opcoes existentes sao explicitamente selecionadas,
+      // a lista inteira cabe na tela e pode ser validada diretamente.
+      const anyUnselected=options.some(o=>o.selected===false);
+      const anyUnknown=options.some(o=>o.selected===null);
+      const count=new Set(options.map(o=>o.id)).size;
+      try { summary.el.click(); } catch {}
+      await sleep(250);
+
+      if (anyUnselected) return 'PARTIAL_SELECTION';
+      if (anyUnknown) return 'FULL_LIST_SELECTION_UNKNOWN';
+      return 'FULL_LIST_ALL_SELECTED:' + count;
+    }
+
+    const oldTop=scroller.scrollTop || 0;
+    const states=new Map();
+    let reachedBottom=false;
+    let lastTop=-1;
+    let guard=0;
+
+    const capture=() => {
+      for (const o of getCompanyOptions()) {
+        if (!states.has(o.id)) states.set(o.id,o.selected);
+        else {
+          const prev=states.get(o.id);
+          if (prev === false || o.selected === false) states.set(o.id,false);
+          else if (prev === true || o.selected === true) states.set(o.id,true);
+          else states.set(o.id,null);
+        }
+      }
+    };
+
+    scroller.scrollTop=0;
+    await sleep(250);
+    capture();
+
+    while (guard++ < 120) {
+      const max=Math.max(0,scroller.scrollHeight-scroller.clientHeight);
+      const now=scroller.scrollTop || 0;
+
+      if (now >= max-2) {
+        reachedBottom=true;
+        capture();
+        break;
+      }
+
+      const step=Math.max(70,Math.floor(scroller.clientHeight*0.72));
+      scroller.scrollTop=Math.min(max,now+step);
+      await sleep(220);
+      capture();
+
+      const moved=scroller.scrollTop || 0;
+      if (moved === now || moved === lastTop) break;
+      lastTop=moved;
+    }
+
+    scroller.scrollTop=oldTop;
+    await sleep(150);
+    try { summary.el.click(); } catch {}
+    await sleep(250);
+
+    const entries=[...states.entries()];
+    const anyUnselected=entries.some(([,v])=>v===false);
+    const anyUnknown=entries.some(([,v])=>v===null);
+
+    if (!reachedBottom) return 'FULL_LIST_NOT_REACHED:' + entries.length;
+    if (anyUnselected) return 'PARTIAL_SELECTION';
+    if (anyUnknown) return 'FULL_LIST_SELECTION_UNKNOWN:' + entries.length;
+    return 'FULL_LIST_ALL_SELECTED:' + entries.length;
+  };
+
+  for (const label of labels) {
+    const slicer=findSlicer(label);
+    if (!slicer) continue;
+
+    if (stateIsAll(slicer)) return 'ALREADY_ALL';
+
+    const summary=getSummary(slicer);
+
+    if (summary && summary.text === 'selecoes multiplas') {
+      // Primeiro tenta zerar qualquer selecao persistente pelo controle nativo do Power BI.
+      if (await tryAccessibleClear(slicer)) {
+        if (stateIsAll(slicer)) return 'CLEARED_BUTTON';
+      }
+
+      if (await tryHeaderEraser(slicer,label)) {
+        if (stateIsAll(slicer)) return 'CLEARED_ERASER';
+      }
+
+      // Se o visual continua como "Selecoes multiplas", valida TODA a lista.
+      const inspection=await inspectEntireMultiSelection(slicer);
+      return inspection;
+    }
+
+    if (await tryAccessibleClear(slicer)) {
+      if (stateIsAll(slicer)) return 'CLEARED_BUTTON';
+    }
+
+    return 'NOT_FOUND';
   }
 
   return 'NOT_FOUND';
@@ -1622,41 +1995,101 @@ function ConvertFrom-RoboPrecosBiHistoricalRows {
     )
 
     $records = @{}
+    $schemaRows = 0
+    $targetPeriodRows = 0
+    $priceErrorRows = 0
+    $validValueRows = 0
+    $observedPeriods = @{}
 
     foreach ($row in @($Rows)) {
         $cells = if ($row -and ($row.PSObject.Properties.Name -contains "Cells")) { @($row.Cells) } else { @($row) }
         if ($cells.Count -lt 7) { continue }
 
-        $year = 0
-        if (-not [int]::TryParse(([string]$cells[0]).Trim(), [ref]$year)) { continue }
+        # O DOM/AX do Power BI pode inserir celulas auxiliares antes/depois
+        # das sete colunas logicas. Em vez de assumir indice 0..6, procura
+        # uma janela que respeite:
+        # Ano | Mes | Empresa | Tipo | Valor Total | Desconto | Quantidade
+        $matched = $false
 
-        $month = Get-RoboPrecosMonthNumber ([string]$cells[1])
-        if ($month -le 0) { continue }
+        for ($offset = 0; $offset -le ($cells.Count - 7); $offset++) {
+            $year = 0
+            $yearText = ([string]$cells[$offset]).Trim()
+            if (-not [int]::TryParse($yearText, [ref]$year)) { continue }
+            if ($year -lt 2000 -or $year -gt 2100) { continue }
 
-        $companyText = ([string]$cells[2]).Trim()
-        if ($companyText -notmatch '^\d+([.,]0+)?$') { continue }
+            $month = Get-RoboPrecosMonthNumber ([string]$cells[$offset + 1])
+            if ($month -le 0) { continue }
 
-        $type = ConvertTo-RoboPrecosNormalizedText ([string]$cells[3])
-        if ($type -ne "PRECO ERRADO") { continue }
+            $companyText = ([string]$cells[$offset + 2]).Trim()
+            if ($companyText -notmatch '^\d+([.,]0+)?$') { continue }
 
-        if ($year -ne $MonthDate.Year -or $month -ne $MonthDate.Month) { continue }
+            $type = ConvertTo-RoboPrecosNormalizedText ([string]$cells[$offset + 3])
+            if ([string]::IsNullOrWhiteSpace($type)) { continue }
 
-        # Historico: Ano | Mes | Empresa | TIPO | Valor Total | Desconto | Quantidade Cupons
-        # Valor Total e deliberadamente ignorado.
-        $discount = ConvertFrom-RoboPrecosBiDecimal $cells[5]
-        $quantity = ConvertFrom-RoboPrecosBiInteger $cells[6]
+            $schemaRows++
+            $periodKey = ("{0:D4}-{1:D2}" -f $year, $month)
+            if (-not $observedPeriods.ContainsKey($periodKey)) {
+                $observedPeriods[$periodKey] = 0
+            }
+            $observedPeriods[$periodKey]++
 
-        if ($null -eq $quantity -or $null -eq $discount) { continue }
+            if ($year -ne $MonthDate.Year -or $month -ne $MonthDate.Month) {
+                $matched = $true
+                break
+            }
 
-        $store = ConvertTo-RoboStore $companyText
-        $records[$store] = [PSCustomObject]@{
-            Loja = $store
-            Empresa = [int][double]$companyText.Replace(",", ".")
-            QuantidadeCupons = [int]$quantity
-            Desconto = [double]$discount
-            Motivo = "PRECO ERRADO"
-            Fonte = "DESCONTOS MES ANTERIOR"
+            $targetPeriodRows++
+
+            if ($type -ne "PRECO ERRADO") {
+                $matched = $true
+                break
+            }
+
+            $priceErrorRows++
+
+            # Valor Total (offset+4) e deliberadamente ignorado.
+            $discount = ConvertFrom-RoboPrecosBiDecimal $cells[$offset + 5]
+            $quantity = ConvertFrom-RoboPrecosBiInteger $cells[$offset + 6]
+
+            if ($null -eq $quantity -or $null -eq $discount) {
+                $matched = $true
+                break
+            }
+
+            $validValueRows++
+
+            $store = ConvertTo-RoboStore $companyText
+            $records[$store] = [PSCustomObject]@{
+                Loja = $store
+                Empresa = [int][double]$companyText.Replace(",", ".")
+                QuantidadeCupons = [int]$quantity
+                Desconto = [double]$discount
+                Motivo = "PRECO ERRADO"
+                Fonte = "DESCONTOS MES ANTERIOR"
+            }
+
+            $matched = $true
+            break
         }
+    }
+
+    $periodSummary = @(
+        $observedPeriods.GetEnumerator() |
+        Sort-Object Name |
+        ForEach-Object { ([string]$_.Name + "=" + [string]$_.Value) }
+    ) -join ", "
+
+    Write-RoboLog (
+        "Historico parser: linhas=" + @($Rows).Count +
+        " | esquema=" + $schemaRows +
+        " | periodo alvo=" + $targetPeriodRows +
+        " | PRECO ERRADO=" + $priceErrorRows +
+        " | valores validos=" + $validValueRows +
+        " | lojas finais=" + $records.Count
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($periodSummary)) {
+        Write-RoboLog ("Historico periodos encontrados: " + $periodSummary)
     }
 
     return @($records.Values | Sort-Object Loja)
@@ -1710,9 +2143,18 @@ function Invoke-RoboPrecosBiDiscountCollection {
 
             Open-RoboPrecosBiPage -Socket $socket -Config $Config -Url ([string]$bi.historicalUrl) -RequiredTexts @("Quantidade Cupons", "Valor Total", "Desconto")
             $slicerState = Clear-RoboPrecosBiEmpresaSlicer -Socket $socket
-            if ([string]$slicerState -eq "NOT_FOUND") {
-                throw "Nao foi possivel confirmar o filtro Empresa=Todos no historico do Power BI. Nenhum desconto sera gravado para evitar leitura parcial por filtro persistente."
+            $slicerOkStates = @("ALREADY_ALL", "CLEARED_BUTTON", "CLEARED_ERASER")
+            $slicerFullListOk = ([string]$slicerState).StartsWith("FULL_LIST_ALL_SELECTED:", [StringComparison]::OrdinalIgnoreCase)
+
+            if (($slicerOkStates -notcontains [string]$slicerState) -and -not $slicerFullListOk) {
+                throw (
+                    "Nao foi possivel garantir Empresa=Todos no historico do Power BI. " +
+                    "Estado detectado: " + [string]$slicerState + ". " +
+                    "Nenhum desconto sera gravado para evitar leitura parcial por filtro persistente."
+                )
             }
+
+            Write-RoboLog ("Historico Power BI: Empresa=Todos confirmado por " + [string]$slicerState)
             Start-Sleep -Seconds 2
 
             $rows = @(Get-RoboPrecosBiGridRows -Socket $socket -RequiredHeaders @("ANO", "MES", "EMPRESA", "TIPO", "VALOR TOTAL", "DESCONTO", "QUANTIDADE CUPONS"))
