@@ -1,0 +1,9 @@
+config.json
+config.precos.json
+data/lojas.csv
+data/pda_credential.json
+data/bi_credential.json
+output/
+*.log
+RoboPrecos_Backups/
+Controle de Auditoria de Pre*.xlsx
