@@ -1,0 +1,18 @@
+RoboPrecos Portable v0.4.8
+Build: 2026-09-22
+Fluxo integrado PDA + Power BI
+LOGIN E NAVEGACAO CONGELADOS no fluxo validado
+Correcao exclusiva da leitura tardia do visual Power BI
+Grid/tabela aguardados por ate 45 segundos
+Retry DOM + Accessibility antes de falhar
+Mes corrente reconciliado com o Total do visual Power BI
+Modo 3 exibe TODAS as lojas coletadas
+Power BI sem exportacao intermediaria
+Mes atual: Resumo / Desconto por Motivo
+Mes fechado: Descontos Mes Anterior
+Somente motivo PRECO ERRADO
+Campos: Quantidade Cupons + Desconto
+Ausencia de loja/campo nao vira zero
+Planilha operacional na raiz da Plataforma RPA
+Backup antes de cada etapa de gravacao
+Sem instalacao | Sem Python | Sem Selenium | Sem GitHub Actions
