@@ -134,6 +134,76 @@ function Get-CentralGitHubToken {
     return ""
 }
 
+function Invoke-CentralPrivateBrowserDownload {
+    param(
+        $Robot,
+        [Parameter(Mandatory = $true)][string]$OutFile
+    )
+
+    $browserUri = ""
+    if ($Robot.PSObject.Properties.Name -contains "repositoryBrowserZip") {
+        $browserUri = ([string]$Robot.repositoryBrowserZip).Trim()
+    }
+
+    if ([string]::IsNullOrWhiteSpace($browserUri)) {
+        throw ("O robo '{0}' e privado e nao possui URL de fallback pelo navegador." -f [string]$Robot.id)
+    }
+
+    $downloads = Join-Path $env:USERPROFILE "Downloads"
+    if (-not (Test-Path -LiteralPath $downloads)) {
+        throw "Pasta Downloads nao encontrada para o fallback de repositorio privado."
+    }
+
+    $pattern = "robo-horas*.zip"
+    if ($Robot.PSObject.Properties.Name -contains "browserDownloadPattern") {
+        $candidatePattern = ([string]$Robot.browserDownloadPattern).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($candidatePattern)) {
+            $pattern = $candidatePattern
+        }
+    }
+
+    $startedAt = (Get-Date).ToUniversalTime()
+
+    Write-Host "[..] Repositorio privado: usando sessao GitHub do navegador..." -ForegroundColor Yellow
+    Write-Host "     O navegador abrira o download autenticado. Nao feche a aba." -ForegroundColor DarkGray
+
+    Start-Process $browserUri
+
+    $deadline = (Get-Date).AddSeconds(120)
+    $downloaded = $null
+
+    while ((Get-Date) -lt $deadline) {
+        $partial = Get-ChildItem -LiteralPath $downloads -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -like ($pattern + ".crdownload") -or
+                $_.Name -like ($pattern + ".tmp")
+            }
+
+        $candidate = Get-ChildItem -LiteralPath $downloads -Filter $pattern -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.LastWriteTimeUtc -ge $startedAt.AddSeconds(-3) -and
+                $_.Length -gt 0
+            } |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -First 1
+
+        if ($candidate -and -not $partial) {
+            $downloaded = $candidate
+            break
+        }
+
+        Start-Sleep -Milliseconds 750
+    }
+
+    if (-not $downloaded) {
+        throw ("A Matrix abriu o download privado do robo '{0}', mas nao encontrou o ZIP concluido em Downloads. " +
+               "Confirme que o navegador esta logado no GitHub e tente novamente.") -f [string]$Robot.id
+    }
+
+    Copy-Item -LiteralPath $downloaded.FullName -Destination $OutFile -Force
+    Write-Host ("[OK] Pacote privado recebido via navegador: {0}" -f $downloaded.Name) -ForegroundColor Green
+}
+
 function Invoke-CentralRobotPackageDownload {
     param($Robot, [Parameter(Mandatory = $true)][string]$OutFile)
 
@@ -144,26 +214,29 @@ function Invoke-CentralRobotPackageDownload {
     }
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     if (-not $isPrivate) {
         Invoke-WebRequest -Uri $uri -OutFile $OutFile -UseBasicParsing
         return
     }
 
     $githubToken = Get-CentralGitHubToken
-    if ([string]::IsNullOrWhiteSpace($githubToken)) {
-        throw (("O robo '{0}' esta em repositorio privado e a Matrix nao encontrou uma credencial GitHub local. " +
-               "Faca login no GitHub CLI/Git Credential Manager ou defina GH_TOKEN/GITHUB_TOKEN apenas no ambiente local. " +
-               "Nenhum token deve ser gravado em robots.json.") -f [string]$Robot.id)
+
+    if (-not [string]::IsNullOrWhiteSpace($githubToken)) {
+        $headers = @{
+            Authorization = ("Bearer " + $githubToken)
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+            "User-Agent" = "Matrix-RPA"
+        }
+
+        Invoke-WebRequest -Uri $uri -Headers $headers -OutFile $OutFile -UseBasicParsing
+        return
     }
 
-    $headers = @{
-        Authorization = ("Bearer " + $githubToken)
-        Accept = "application/vnd.github+json"
-        "X-GitHub-Api-Version" = "2022-11-28"
-        "User-Agent" = "Matrix-RPA"
-    }
-    Invoke-WebRequest -Uri $uri -Headers $headers -OutFile $OutFile -UseBasicParsing
+    Invoke-CentralPrivateBrowserDownload -Robot $Robot -OutFile $OutFile
 }
+
 function Ensure-RobotInstalled {
     param($Robot)
 
