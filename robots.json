@@ -14,12 +14,12 @@
     },
     {
       "id": "robo-horas",
-      "name": "BI → WhatsApp",
-      "description": "Extrai e trata o relatório do BI e executa o fluxo de disparo pelo WhatsApp.",
+      "name": "BI → WhatsApp | Horas Extras",
+      "description": "Robo de Horas v1.2: teste preservado, producao automatica D-1 e producao manual usando base mestre Excel.",
       "category": "COMUNICACAO",
       "symbol": ">>",
       "enabled": true,
-      "command": "robots\\robo-horas\\RoboHoras.cmd",
+      "command": "robots\\robo-horas-v1.2\\RoboHoras.cmd",
       "repositoryZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/main.zip"
     }
   ]
