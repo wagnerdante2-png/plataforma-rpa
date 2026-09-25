@@ -58,3 +58,19 @@ O arquivo não faz parte do repositório Git. No empacotamento corporativo defin
 O terceiro card de recursos acopla a aplicação `aderencia-escala` no primeiro acesso.
 A cópia operacional fica em `apps/aderencia-escala/` e é servida pela própria Central em `/apps/aderencia-escala/`.
 A pasta `.github` e a pasta `tests` do repositório de origem não são copiadas para o pacote operacional.
+
+
+## Robos em repositorios privados
+
+A Central suporta fontes privadas no catalogo `robots.json` usando `"privateRepository": true`.
+
+Para instalar um robo privado, a maquina precisa possuir uma credencial GitHub local valida. A Central procura, nesta ordem:
+
+1. variavel de ambiente `GH_TOKEN`;
+2. variavel de ambiente `GITHUB_TOKEN`;
+3. sessao existente do GitHub CLI (`gh auth token`);
+4. credencial ja armazenada no Git Credential Manager.
+
+O token nao e gravado em `robots.json`, no repositorio ou nos logs.
+
+O Robo Horas v1.2 e instalado em `robots\robo-horas-v1.2` a partir do repositorio privado `wagnerdante2-png/robo-horas`. A base real de contatos acompanha esse pacote privado; nenhum telefone e armazenado no repositorio publico da Matrix.
