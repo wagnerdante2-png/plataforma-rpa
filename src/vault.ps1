@@ -27,30 +27,34 @@ function Protect-MatrixVaultAcl {
     try {
         $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $userSid = $identity.User
-        $systemSid = New-Object Security.Principal.SecurityIdentifier("S-1-5-18")
+        $systemSid = New-Object -TypeName Security.Principal.SecurityIdentifier -ArgumentList "S-1-5-18"
 
         if (Test-Path -LiteralPath $Path -PathType Container) {
-            $security = New-Object Security.AccessControl.DirectorySecurity
+            $security = New-Object -TypeName Security.AccessControl.DirectorySecurity
             $security.SetOwner($userSid)
             $security.SetAccessRuleProtection($true, $false)
             $inherit = [Security.AccessControl.InheritanceFlags]"ContainerInherit, ObjectInherit"
             $prop = [Security.AccessControl.PropagationFlags]::None
             $rights = [Security.AccessControl.FileSystemRights]::FullControl
             $allow = [Security.AccessControl.AccessControlType]::Allow
-            $security.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($userSid, $rights, $inherit, $prop, $allow)))
-            $security.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($systemSid, $rights, $inherit, $prop, $allow)))
+            $userRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($userSid, $rights, $inherit, $prop, $allow)
+            $systemRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($systemSid, $rights, $inherit, $prop, $allow)
+            $security.AddAccessRule($userRule)
+            $security.AddAccessRule($systemRule)
             Set-Acl -LiteralPath $Path -AclObject $security
             return
         }
 
         if (Test-Path -LiteralPath $Path -PathType Leaf) {
-            $security = New-Object Security.AccessControl.FileSecurity
+            $security = New-Object -TypeName Security.AccessControl.FileSecurity
             $security.SetOwner($userSid)
             $security.SetAccessRuleProtection($true, $false)
             $rights = [Security.AccessControl.FileSystemRights]::FullControl
             $allow = [Security.AccessControl.AccessControlType]::Allow
-            $security.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($userSid, $rights, $allow)))
-            $security.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($systemSid, $rights, $allow)))
+            $userRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($userSid, $rights, $allow)
+            $systemRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($systemSid, $rights, $allow)
+            $security.AddAccessRule($userRule)
+            $security.AddAccessRule($systemRule)
             Set-Acl -LiteralPath $Path -AclObject $security
         }
     }
