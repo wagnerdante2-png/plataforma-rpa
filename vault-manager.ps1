@@ -37,7 +37,22 @@ function Import-ZenviaTokenCsv {
 
     foreach ($file in $candidates) {
         try {
-            $rows = @(Import-Csv -LiteralPath $file.FullName)
+            $header = Get-Content -LiteralPath $file.FullName -TotalCount 1 -Encoding UTF8
+            $delimiter = ","
+            if ($header) {
+                $commaCount = ([regex]::Matches($header, ',')).Count
+                $semicolonCount = ([regex]::Matches($header, ';')).Count
+                $tabCount = ([regex]::Matches($header, [char]9)).Count
+
+                if ($semicolonCount -gt $commaCount -and $semicolonCount -ge $tabCount) {
+                    $delimiter = ";"
+                }
+                elseif ($tabCount -gt $commaCount -and $tabCount -gt $semicolonCount) {
+                    $delimiter = [char]9
+                }
+            }
+
+            $rows = @(Import-Csv -LiteralPath $file.FullName -Delimiter $delimiter)
             if ($rows.Count -eq 0) { continue }
 
             $props = @($rows[0].PSObject.Properties.Name)
