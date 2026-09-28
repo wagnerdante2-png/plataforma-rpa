@@ -1,7 +1,6 @@
 Set-StrictMode -Version 2.0
 
 $script:MatrixVaultVersion = 1
-$script:MatrixVaultEntropyText = "MATRIX_RPA_VAULT_V1"
 
 function Get-MatrixVaultRoot {
     param([string]$PlatformRoot)
@@ -25,94 +24,10 @@ function Get-MatrixVaultPaths {
 function Protect-MatrixVaultAcl {
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    try {
-        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $userSid = $identity.User
-        $systemSid = New-Object -TypeName Security.Principal.SecurityIdentifier -ArgumentList "S-1-5-18"
-        $rights = [Security.AccessControl.FileSystemRights]::FullControl
-        $allow = [Security.AccessControl.AccessControlType]::Allow
-
-        if (Test-Path -LiteralPath $Path -PathType Container) {
-            $security = Get-Acl -LiteralPath $Path
-            $security.SetAccessRuleProtection($true, $false)
-            foreach ($rule in @($security.Access)) {
-                [void]$security.RemoveAccessRuleSpecific($rule)
-            }
-
-            $inherit = [Security.AccessControl.InheritanceFlags]"ContainerInherit, ObjectInherit"
-            $prop = [Security.AccessControl.PropagationFlags]::None
-            $userRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($userSid, $rights, $inherit, $prop, $allow)
-            $systemRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($systemSid, $rights, $inherit, $prop, $allow)
-            $security.AddAccessRule($userRule)
-            $security.AddAccessRule($systemRule)
-            Set-Acl -LiteralPath $Path -AclObject $security
-            return
-        }
-
-        if (Test-Path -LiteralPath $Path -PathType Leaf) {
-            $security = Get-Acl -LiteralPath $Path
-            $security.SetAccessRuleProtection($true, $false)
-            foreach ($rule in @($security.Access)) {
-                [void]$security.RemoveAccessRuleSpecific($rule)
-            }
-
-            $userRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($userSid, $rights, $allow)
-            $systemRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($systemSid, $rights, $allow)
-            $security.AddAccessRule($userRule)
-            $security.AddAccessRule($systemRule)
-            Set-Acl -LiteralPath $Path -AclObject $security
-            return
-        }
-    }
-    catch {
-        Write-Warning ("ACL adicional do Cofre Matrix nao pode ser aplicada neste Windows. DPAPI CurrentUser continua protegendo os segredos. Motivo: " + $_.Exception.Message)
-        return
-    }
-
+    # Ambiente corporativo pode bloquear alteracoes de ACL sem privilegio elevado.
+    # A protecao do segredo e feita pelo proprio Windows via ConvertFrom-SecureString
+    # no contexto do usuario atual. Esta funcao fica propositalmente silenciosa.
     return
-}
-
-function Get-MatrixVaultEntropy {
-    return [Text.Encoding]::UTF8.GetBytes($script:MatrixVaultEntropyText)
-}
-
-function Protect-MatrixSecretText {
-    param([Parameter(Mandatory = $true)][string]$PlainText)
-    if ([string]::IsNullOrEmpty($PlainText)) { throw "O segredo nao pode ser vazio." }
-
-    $bytes = [Text.Encoding]::UTF8.GetBytes($PlainText)
-    try {
-        $protected = [Security.Cryptography.ProtectedData]::Protect(
-            $bytes,
-            (Get-MatrixVaultEntropy),
-            [Security.Cryptography.DataProtectionScope]::CurrentUser
-        )
-        return [Convert]::ToBase64String($protected)
-    }
-    finally {
-        [Array]::Clear($bytes, 0, $bytes.Length)
-    }
-}
-
-function Unprotect-MatrixSecretText {
-    param([Parameter(Mandatory = $true)][string]$CipherText)
-    $protected = [Convert]::FromBase64String($CipherText)
-    $plainBytes = $null
-    try {
-        $plainBytes = [Security.Cryptography.ProtectedData]::Unprotect(
-            $protected,
-            (Get-MatrixVaultEntropy),
-            [Security.Cryptography.DataProtectionScope]::CurrentUser
-        )
-        return [Text.Encoding]::UTF8.GetString($plainBytes)
-    }
-    catch {
-        throw "Nao foi possivel descriptografar o segredo. Use o mesmo usuario Windows que cadastrou a credencial."
-    }
-    finally {
-        if ($plainBytes) { [Array]::Clear($plainBytes, 0, $plainBytes.Length) }
-        if ($protected) { [Array]::Clear($protected, 0, $protected.Length) }
-    }
 }
 
 function Initialize-MatrixVault {
@@ -247,15 +162,9 @@ function Set-MatrixSecret {
     $normalized = Normalize-MatrixSecretId -Id $Id
     $state = Read-MatrixVault -PlatformRoot $PlatformRoot
 
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secret)
-    try {
-        $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
-        if ([string]::IsNullOrEmpty($plain)) { throw "O segredo nao pode ser vazio." }
-        $cipher = Protect-MatrixSecretText -PlainText $plain
-    }
-    finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-        $plain = $null
+    $cipher = ($Secret | ConvertFrom-SecureString)
+    if ([string]::IsNullOrWhiteSpace([string]$cipher)) {
+        throw "O segredo nao pode ser vazio."
     }
 
     $now = (Get-Date).ToString("o")
@@ -300,12 +209,11 @@ function Get-MatrixSecretSecure {
         throw ("Segredo nao encontrado no Cofre Matrix: " + $normalized)
     }
 
-    $plain = Unprotect-MatrixSecretText -CipherText ([string]$record[0].cipher)
     try {
-        return (ConvertTo-SecureString $plain -AsPlainText -Force)
+        return (ConvertTo-SecureString ([string]$record[0].cipher))
     }
-    finally {
-        $plain = $null
+    catch {
+        throw "Nao foi possivel descriptografar o segredo. Use o mesmo usuario Windows que cadastrou a credencial."
     }
 }
 
