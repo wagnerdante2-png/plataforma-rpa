@@ -336,10 +336,10 @@ function Remove-MatrixSecret {
     $before = @($state.Data.secrets).Count
     $state.Data.secrets = @($state.Data.secrets | Where-Object { ([string]$_.id) -ne $normalized })
 
-    if (@($state.Data.secrets).Count -eq $before) { return }
+    if (@($state.Data.secrets).Count -eq $before) { return $false }
 
     Write-MatrixVault -VaultData $state.Data -Paths $state.Paths
-    return
+    return $true
 }
 
 function Test-MatrixSecret {
@@ -355,6 +355,6 @@ function Test-MatrixSecret {
         return $ok
     }
     catch {
-        return
+        return $false
     }
 }
