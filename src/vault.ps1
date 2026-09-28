@@ -6,7 +6,7 @@ $script:MatrixVaultEntropyText = "MATRIX_RPA_VAULT_V1"
 function Get-MatrixVaultRoot {
     param([string]$PlatformRoot)
     if ([string]::IsNullOrWhiteSpace($PlatformRoot)) {
-        $PlatformRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+        $PlatformRoot = Split-Path -Parent $PSScriptRoot
     }
     return [IO.Path]::GetFullPath($PlatformRoot)
 }
