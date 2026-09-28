@@ -24,43 +24,52 @@ function Get-MatrixVaultPaths {
 
 function Protect-MatrixVaultAcl {
     param([Parameter(Mandatory = $true)][string]$Path)
+
     try {
         $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $userSid = $identity.User
         $systemSid = New-Object -TypeName Security.Principal.SecurityIdentifier -ArgumentList "S-1-5-18"
+        $rights = [Security.AccessControl.FileSystemRights]::FullControl
+        $allow = [Security.AccessControl.AccessControlType]::Allow
 
         if (Test-Path -LiteralPath $Path -PathType Container) {
-            $security = New-Object -TypeName Security.AccessControl.DirectorySecurity
-            $security.SetOwner($userSid)
+            $security = Get-Acl -LiteralPath $Path
             $security.SetAccessRuleProtection($true, $false)
+            foreach ($rule in @($security.Access)) {
+                [void]$security.RemoveAccessRuleSpecific($rule)
+            }
+
             $inherit = [Security.AccessControl.InheritanceFlags]"ContainerInherit, ObjectInherit"
             $prop = [Security.AccessControl.PropagationFlags]::None
-            $rights = [Security.AccessControl.FileSystemRights]::FullControl
-            $allow = [Security.AccessControl.AccessControlType]::Allow
             $userRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($userSid, $rights, $inherit, $prop, $allow)
             $systemRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($systemSid, $rights, $inherit, $prop, $allow)
             $security.AddAccessRule($userRule)
             $security.AddAccessRule($systemRule)
             Set-Acl -LiteralPath $Path -AclObject $security
-            return
+            return $true
         }
 
         if (Test-Path -LiteralPath $Path -PathType Leaf) {
-            $security = New-Object -TypeName Security.AccessControl.FileSecurity
-            $security.SetOwner($userSid)
+            $security = Get-Acl -LiteralPath $Path
             $security.SetAccessRuleProtection($true, $false)
-            $rights = [Security.AccessControl.FileSystemRights]::FullControl
-            $allow = [Security.AccessControl.AccessControlType]::Allow
+            foreach ($rule in @($security.Access)) {
+                [void]$security.RemoveAccessRuleSpecific($rule)
+            }
+
             $userRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($userSid, $rights, $allow)
             $systemRule = New-Object -TypeName Security.AccessControl.FileSystemAccessRule -ArgumentList @($systemSid, $rights, $allow)
             $security.AddAccessRule($userRule)
             $security.AddAccessRule($systemRule)
             Set-Acl -LiteralPath $Path -AclObject $security
+            return $true
         }
     }
     catch {
-        throw ("Falha aplicando ACL privada ao cofre: " + $_.Exception.Message)
+        Write-Warning ("ACL adicional do Cofre Matrix nao pode ser aplicada neste Windows. DPAPI CurrentUser continua protegendo os segredos. Motivo: " + $_.Exception.Message)
+        return $false
     }
+
+    return $false
 }
 
 function Get-MatrixVaultEntropy {
