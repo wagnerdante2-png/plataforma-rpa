@@ -46,7 +46,7 @@ function Protect-MatrixVaultAcl {
             $security.AddAccessRule($userRule)
             $security.AddAccessRule($systemRule)
             Set-Acl -LiteralPath $Path -AclObject $security
-            return $true
+            return
         }
 
         if (Test-Path -LiteralPath $Path -PathType Leaf) {
@@ -61,15 +61,15 @@ function Protect-MatrixVaultAcl {
             $security.AddAccessRule($userRule)
             $security.AddAccessRule($systemRule)
             Set-Acl -LiteralPath $Path -AclObject $security
-            return $true
+            return
         }
     }
     catch {
         Write-Warning ("ACL adicional do Cofre Matrix nao pode ser aplicada neste Windows. DPAPI CurrentUser continua protegendo os segredos. Motivo: " + $_.Exception.Message)
-        return $false
+        return
     }
 
-    return $false
+    return
 }
 
 function Get-MatrixVaultEntropy {
@@ -122,7 +122,7 @@ function Initialize-MatrixVault {
     if (-not (Test-Path -LiteralPath $paths.Directory)) {
         New-Item -ItemType Directory -Path $paths.Directory -Force | Out-Null
     }
-    Protect-MatrixVaultAcl -Path $paths.Directory
+    [void](Protect-MatrixVaultAcl -Path $paths.Directory)
 
     if (-not (Test-Path -LiteralPath $paths.File)) {
         $now = (Get-Date).ToString("o")
@@ -134,7 +134,7 @@ function Initialize-MatrixVault {
             secrets = @()
         }
         $vault | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $paths.File -Encoding UTF8
-        Protect-MatrixVaultAcl -Path $paths.File
+        [void](Protect-MatrixVaultAcl -Path $paths.File)
     }
 
     return $paths
@@ -175,9 +175,9 @@ function Write-MatrixVault {
 
     try {
         $VaultData | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $temp -Encoding UTF8
-        Protect-MatrixVaultAcl -Path $temp
+        [void](Protect-MatrixVaultAcl -Path $temp)
         Move-Item -LiteralPath $temp -Destination $Paths.File -Force
-        Protect-MatrixVaultAcl -Path $Paths.File
+        [void](Protect-MatrixVaultAcl -Path $Paths.File)
     }
     finally {
         if (Test-Path -LiteralPath $temp) {
@@ -336,10 +336,10 @@ function Remove-MatrixSecret {
     $before = @($state.Data.secrets).Count
     $state.Data.secrets = @($state.Data.secrets | Where-Object { ([string]$_.id) -ne $normalized })
 
-    if (@($state.Data.secrets).Count -eq $before) { return $false }
+    if (@($state.Data.secrets).Count -eq $before) { return }
 
     Write-MatrixVault -VaultData $state.Data -Paths $state.Paths
-    return $true
+    return
 }
 
 function Test-MatrixSecret {
@@ -355,6 +355,6 @@ function Test-MatrixSecret {
         return $ok
     }
     catch {
-        return $false
+        return
     }
 }
