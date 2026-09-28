@@ -15,11 +15,11 @@
     {
       "id": "robo-horas",
       "name": "BI → WhatsApp | Horas Extras",
-      "description": "Robo de Horas v1.2: teste preservado, producao automatica D-1 e producao manual usando base mestre Excel.",
+      "description": "Robo de Horas v1.3: teste com WhatsApp Web ou Zenvia API; producao automatica/manual preservadas no fluxo validado.",
       "category": "COMUNICACAO",
       "symbol": ">>",
       "enabled": true,
-      "command": "robots\\robo-horas-v1.2\\RoboHoras.cmd",
+      "command": "robots\\robo-horas-v1.3\\RoboHoras.cmd",
       "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/main",
       "privateRepository": true,
       "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/main.zip",
