@@ -93,9 +93,9 @@ A pasta `private\` e ignorada pelo Git e nao deve ser enviada para repositorios,
 
 ### Protecao
 
-- segredos criptografados com Windows DPAPI;
-- escopo `CurrentUser`: somente o mesmo usuario Windows que cadastrou o segredo consegue descriptografa-lo;
-- ACL privada aplicada ao diretorio e ao arquivo;
+- segredos protegidos com `ConvertFrom-SecureString`, usando a protecao nativa do Windows para o usuario atual;
+- somente o mesmo contexto de usuario Windows que cadastrou o segredo consegue recupera-lo;
+- nenhuma permissao administrativa ou alteracao especial de ACL e exigida;
 - valores nunca sao exibidos pela listagem do cofre;
 - o JSON guarda apenas metadados e o texto cifrado.
 
@@ -103,9 +103,9 @@ A pasta `private\` e ignorada pelo Git e nao deve ser enviada para repositorios,
 
 Abra `Cofre Matrix.cmd` e use:
 
-`3 - Importar token Zenvia do CSV em Downloads`
+`2 - Adicionar/atualizar uma credencial`
 
-O gerenciador identifica um CSV recente que contenha coluna de token, importa o valor sem exibi-lo e salva com o ID:
+Cadastre o token sem exibi-lo na tela com o ID:
 
 `ZENVIA_ROBO_HORAS`
 
@@ -113,7 +113,7 @@ Conta/remetente associada:
 
 `5511993581874`
 
-Apos a importacao, o gerenciador oferece remover o CSV original de Downloads para evitar manter o token em texto legivel.
+Apos o cadastro, remova manualmente o CSV original de Downloads para evitar manter o token em texto legivel.
 
 ### Consulta por um robo
 
