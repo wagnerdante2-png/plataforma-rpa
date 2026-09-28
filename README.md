@@ -74,3 +74,62 @@ Para instalar um robo privado, a maquina precisa possuir uma credencial GitHub l
 O token nao e gravado em `robots.json`, no repositorio ou nos logs.
 
 O Robo Horas v1.2 e instalado em `robots\robo-horas-v1.2` a partir do repositorio privado `wagnerdante2-png/robo-horas`. A base real de contatos acompanha esse pacote privado; nenhum telefone e armazenado no repositorio publico da Matrix.
+
+
+## Cofre Matrix
+
+A plataforma inclui um cofre local criptografado para senhas, tokens e outras credenciais usadas pelos robos.
+
+Arquivos:
+- `src\vault.ps1` — motor do cofre;
+- `vault-manager.ps1` — gerenciamento interativo;
+- `Cofre Matrix.cmd` — launcher para cadastro/manutencao.
+
+Os dados reais sao criados somente em:
+
+`private\vault\vault.json`
+
+A pasta `private\` e ignorada pelo Git e nao deve ser enviada para repositorios, e-mails ou compartilhamentos.
+
+### Protecao
+
+- segredos criptografados com Windows DPAPI;
+- escopo `CurrentUser`: somente o mesmo usuario Windows que cadastrou o segredo consegue descriptografa-lo;
+- ACL privada aplicada ao diretorio e ao arquivo;
+- valores nunca sao exibidos pela listagem do cofre;
+- o JSON guarda apenas metadados e o texto cifrado.
+
+### Token Zenvia do Robo Horas
+
+Abra `Cofre Matrix.cmd` e use:
+
+`3 - Importar token Zenvia do CSV em Downloads`
+
+O gerenciador identifica um CSV recente que contenha coluna de token, importa o valor sem exibi-lo e salva com o ID:
+
+`ZENVIA_ROBO_HORAS`
+
+Conta/remetente associada:
+
+`5511993581874`
+
+Apos a importacao, o gerenciador oferece remover o CSV original de Downloads para evitar manter o token em texto legivel.
+
+### Consulta por um robo
+
+Um robo instalado dentro da Matrix pode carregar o modulo e consultar um segredo pelo ID logico:
+
+```powershell
+$matrixRoot = Split-Path -Parent (Split-Path -Parent $Root)
+. (Join-Path $matrixRoot "src\vault.ps1")
+
+$token = Get-MatrixSecretValue -Id "ZENVIA_ROBO_HORAS" -PlatformRoot $matrixRoot
+try {
+    # usar $token apenas na chamada da API; nunca registrar em log
+}
+finally {
+    $token = $null
+}
+```
+
+Para verificacoes sem revelar o valor, use `Test-MatrixSecret` ou `Get-MatrixSecretMetadata`.
