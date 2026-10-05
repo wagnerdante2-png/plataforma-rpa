@@ -27,16 +27,16 @@
     },
     {
       "id": "robo-horas-v2-test",
-      "name": "BI → WhatsApp | Horas Extras V2 TESTE R2",
-      "description": "Revisao 2 isolada do Robo Horas V2: template Diretoria V2 + correcao de redirect/login Power BI.",
+      "name": "BI → WhatsApp | Horas Extras V2 TESTE LIMPO",
+      "description": "Copia limpa do Robo Horas congelado funcional; unica alteracao: teste da Diretoria usa o template V2 aprovado com regionais em linhas.",
       "category": "COMUNICACAO",
       "symbol": ">>",
       "enabled": true,
-      "command": "robots\\robo-horas-v2-test-r2\\RoboHoras.cmd",
-      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/test-director-lines-2026-10-01",
+      "command": "robots\\robo-horas-v2-test-clean\\RoboHoras.cmd",
+      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/test-director-v2-clean",
       "privateRepository": true,
-      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/test-director-lines-2026-10-01.zip",
-      "browserDownloadPattern": "robo-horas-test-director-lines-2026-10-01*.zip"
+      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/test-director-v2-clean.zip",
+      "browserDownloadPattern": "robo-horas-test-director-v2-clean*.zip"
     }
   ]
 }
