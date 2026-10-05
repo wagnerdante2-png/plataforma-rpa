@@ -24,6 +24,19 @@
       "privateRepository": true,
       "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/main.zip",
       "browserDownloadPattern": "robo-horas-main*.zip"
+    },
+    {
+      "id": "robo-horas-v2-test",
+      "name": "BI → WhatsApp | Horas Extras V2 TESTE",
+      "description": "Versao isolada de teste do Robo Horas com template Diretoria V2 aprovado. Nao substitui a producao atual.",
+      "category": "COMUNICACAO",
+      "symbol": ">>",
+      "enabled": true,
+      "command": "robots\\robo-horas-v2-test\\RoboHoras.cmd",
+      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/test-director-lines-2026-10-01",
+      "privateRepository": true,
+      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/test-director-lines-2026-10-01.zip",
+      "browserDownloadPattern": "robo-horas-test-director-lines-2026-10-01*.zip"
     }
   ]
 }
