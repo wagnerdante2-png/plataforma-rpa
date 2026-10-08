@@ -37,6 +37,19 @@
       "privateRepository": true,
       "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/test-director-v2-clean.zip",
       "browserDownloadPattern": "robo-horas-test-director-v2-clean*.zip"
+    },
+    {
+      "id": "robo-nf",
+      "name": "BI → WhatsApp | Notas Fiscais Pendentes",
+      "description": "Coleta NFs expedidas pendentes no Power BI, consolida por loja e permite teste isolado via Zenvia usando o cofre Matrix.",
+      "category": "COMUNICACAO",
+      "symbol": "NF",
+      "enabled": true,
+      "command": "robots\\robo-nf\\RoboNF.cmd",
+      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-nf/zipball/main",
+      "privateRepository": true,
+      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-nf/archive/refs/heads/main.zip",
+      "browserDownloadPattern": "robo-nf-main*.zip"
     }
   ]
 }
