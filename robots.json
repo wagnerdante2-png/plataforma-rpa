@@ -20,10 +20,10 @@
       "symbol": ">>",
       "enabled": true,
       "command": "robots\\robo-horas-v1.3\\RoboHoras.cmd",
-      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/main",
+      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/3272b17ffa98baed8bb426e74470f750d78bb637",
       "privateRepository": true,
-      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/main.zip",
-      "browserDownloadPattern": "robo-horas-main*.zip"
+      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/3272b17ffa98baed8bb426e74470f750d78bb637.zip",
+      "browserDownloadPattern": "robo-horas-3272b17*.zip"
     },
     {
       "id": "robo-horas-v2-test",
