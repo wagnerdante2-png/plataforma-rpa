@@ -20,10 +20,10 @@
       "symbol": ">>",
       "enabled": true,
       "command": "robots\\robo-horas-v1.3\\RoboHoras.cmd",
-      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/main",
+      "repositoryZip": "https://api.github.com/repos/wagnerdante2-png/robo-horas/zipball/fix/isolamento-lojas-he-20261014",
       "privateRepository": true,
-      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/main.zip",
-      "browserDownloadPattern": "robo-horas-main*.zip"
+      "repositoryBrowserZip": "https://github.com/wagnerdante2-png/robo-horas/archive/refs/heads/fix/isolamento-lojas-he-20261014.zip",
+      "browserDownloadPattern": "robo-horas-fix-isolamento-lojas-he-20261014*.zip"
     },
     {
       "id": "robo-horas-v2-test",
